@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sprintf/sprintf.dart';
 
 import 'text_butler.dart';
 import 'text_butler_io.dart';
@@ -69,17 +70,21 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _linesInput = 8;
-  int _linesOutput = 8;
+  static final regExpLayout = RegExp(r'ratio=(\d+(\.\d+)?)');
+  double _ratio = 1.0;
+  double _lastWidth = 0;
+  double _lastHeight = 0;
   final fieldState = FieldState();
   final textManipulator = TextButlerIO();
   final GlobalKey<FormState> _formKey =
       GlobalKey<FormState>(debugLabel: 'text_butler');
   final _layoutController = TextEditingController();
+
   final _commandController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
+    handleDimension(context);
     final padding = 16.0;
     fieldState.bufferNames = textManipulator.buffers.keys.toList();
     fieldState.bufferNames.sort();
@@ -101,12 +106,21 @@ class _MyHomePageState extends State<MyHomePage> {
             child: Text(textManipulator.errorMessage ?? '',
                 style: TextStyle(color: Colors.red))),
         SizedBox(width: padding),
-        Container(
-          width: 200,
-          child: TextFormField(
-            controller: _layoutController,
-            decoration: InputDecoration(labelText: 'Layout'),
-          ),
+        Row(
+          children: <Widget>[
+            Container(
+                width: 200,
+                child: TextFormField(
+                  controller: _layoutController,
+                  decoration: InputDecoration(labelText: 'Layout'),
+                )),
+            Container(
+                width: 100,
+                child: ElevatedButton(
+                  onPressed: () => handleLayout(_layoutController.text),
+                  child: Text('Resize'),
+                )),
+          ],
         ),
       ]),
       Expanded(
@@ -115,14 +129,14 @@ class _MyHomePageState extends State<MyHomePage> {
               padding: const EdgeInsets.all(16),
               crossAxisSpacing: 10,
               mainAxisSpacing: 10,
-              childAspectRatio: 3.0,
+              childAspectRatio: _ratio,
               crossAxisCount: 2,
               shrinkWrap: true,
               children: <Widget>[
-            gridItem(0),
-            gridItem(1),
-            gridItem(2),
-            gridItem(3),
+            gridItem(0, padding),
+            gridItem(1, padding),
+            gridItem(2, padding),
+            gridItem(3, padding),
           ]))
     ]);
     return Scaffold(
@@ -162,7 +176,7 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  Widget gridItem(int id) {
+  Widget gridItem(int id, double padding) {
     //final items = <DropdownMenuItem<int>>[];
     var ix = 0;
     final info = fieldState.bufferInfo[id];
@@ -194,7 +208,7 @@ class _MyHomePageState extends State<MyHomePage> {
         },
       ),
       SizedBox(
-        height: 20,
+        height: padding,
       ),
       Expanded(
           child: Card(
@@ -228,10 +242,41 @@ class _MyHomePageState extends State<MyHomePage> {
     return rc;
   }
 
+  void handleDimension(BuildContext context) {
+    // Full screen width and height
+    double width = MediaQuery.of(context).size.width;
+    double height = MediaQuery.of(context).size.height;
+
+    // Height (without SafeArea)
+    var padding = MediaQuery.of(context).padding;
+    double height1 = height - padding.top - padding.bottom;
+
+    // Height (without status bar)
+    double height2 = height - padding.top;
+
+    // Height (without status and toolbar)
+    double height3 = height - padding.top - kToolbarHeight;
+    if ((_lastWidth - width).abs() >= 1.0 ||
+        (_lastHeight - height3).abs() >= 1.0) {
+      _ratio = width / height3;
+      _layoutController.text = 'ratio=' + sprintf('%.1f', [_ratio]);
+      _lastWidth = width;
+      _lastHeight = height3;
+    }
+  }
+
+  void handleLayout(String input) {
+    var rc = false;
+    RegExpMatch? match;
+    if ((match = regExpLayout.firstMatch(input)) != null) {
+      _ratio = double.parse(match!.group(1)!);
+      setState(() => 1);
+    }
+  }
+
   @override
   void initState() {
     super.initState();
-    _layoutController.text = 'input=$_linesInput output=$_linesOutput';
     //_commandController.text = r'duplicate count=5 pattern="#" template=/<%index%> /';
     //textManipulator.buffers['input'] = 'one # xxx\n';
   }

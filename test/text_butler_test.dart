@@ -171,7 +171,8 @@ void main() {
       expect(butler.buffers['y'], 'Hi!');
     });
     test('text with meta symbols', () {
-      expect(butler.execute(r'copy text=i%"Hi!%n%t1%v2%f3%r" output=y'), isNull);
+      expect(
+          butler.execute(r'copy text=i%"Hi!%n%t1%v2%f3%r" output=y'), isNull);
       expect(butler.buffers['y'], 'Hi!\n\t1\v2\f3\r');
     });
   });
@@ -333,8 +334,7 @@ name: Berta
 ''');
     });
   });
-  group('TextButler-execute', ()
-  {
+  group('TextButler-execute', () {
     final butler = TextButler();
     test('simple', () {
       butler.buffers['input'] = '''copy out=script text="Hi "
@@ -343,7 +343,8 @@ copy append out=script text="world"''';
       expect(butler.getBuffer('script'), 'Hi world');
     });
     test('from examples', () {
-      butler.buffers['script'] = '''copy text=i~"%index%: Id: id%number% Name: %char%%char%%char%~n" output=template
+      butler.buffers['script'] =
+          '''copy text=i~"%index%: Id: id%number% Name: %char%%char%%char%~n" output=template
 duplicate input=template count=3 offset=1 baseChar=A''';
       expect(butler.execute('execute input=script'), isNull);
       expect(butler.getBuffer('output'), '''0: Id: id1 Name: AAA

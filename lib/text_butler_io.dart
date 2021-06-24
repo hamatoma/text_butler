@@ -77,7 +77,7 @@ class TextButlerIO extends TextButler {
     try {
       file2.writeAsStringSync(getBuffer(current.asString('input')),
           mode: append ? FileMode.append : FileMode.writeOnly);
-    } on FileSystemException catch(exc){
+    } on FileSystemException catch (exc) {
       throw InternalError('executeStore()', exc.toString());
     }
   }

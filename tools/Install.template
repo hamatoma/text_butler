@@ -1,0 +1,71 @@
+#! /bin/bash
+FLUTTER_APP1=text_butler
+DART_APP1=text_slave
+LABEL="===SEPARATOR-BETWEEN-SCRIPT-AND_TAR==="
+END_LABEL="===END-SCRIPT-AND_TAR==="
+TAR=/tmp/$FLUTTER_APP1.bundle.tgz
+TARGET=/usr/share/$FLUTTER_APP1
+ARCH=x86_64
+BIN_BASE=/usr/bin
+function CheckBin(){
+  local binary="$1"
+  if [ -z "$(which $binary)" ]; then
+    echo "+++ missing program $binary"
+  fi
+}
+function CheckNeeded(){
+  local fail=0
+  for cmd in tar sed rsync; do
+    local error=$(CheckBin $cmd)
+    if [ -n "$error" ]; then
+      echo "$error"
+      fail=$(expr $fail + 1)
+    fi
+  done
+  echo $fail
+}
+function CreateLink(){
+  local src=$1
+  local trg=$2
+  if [ ! -L $trg ]; then
+    ln -v -s $src $(dirname $trg)
+  else
+    local ref=$(readlink $trg)
+    if [ "$ref" = $src ]; then
+      echo "link $trg already exists: $ref"
+    else
+      echo "wrong link target of $trg: $ref instead of $src"
+    fi
+  fi
+}
+if [ "$(id -u)" != 0 ]; then
+  echo "be root!"
+elif [ "$(CheckNeeded)" != 0 ]; then
+  echo "+++ please install the missing program(s)"
+elif [ "$(uname -m)" != $ARCH ]; then
+  echo "wrong architecture: $ARCH expected $(uname -m) found"
+else
+  echo "==== requirements fulfilled"
+  LINE_NO=$(grep --text -n "^$LABEL" $0 | grep -o "^[0-9]*")
+  LINE_NO=$(expr $LINE_NO + 1)
+  END_NO=$(grep -n --text "^$END_LABEL" $0 | grep -o "^[0-9]*")
+  echo "found: $LINE_NO-$END_NO"
+  sed -n "$LINE_NO,$END_NO p" $0 > $TAR
+  echo "tar created: $(ls -ld $TAR)"
+  FOUND=$(file $TAR)
+  if [ -z "$(echo \"$FOUND\" | grep compressed)" ]; then
+    echo "+++ no tar archive found"
+  else
+    if [ -d $TARGET ]; then
+      echo "saving old version..."
+      TRG=$TARGET.$(date +%s)
+      mv -v $TARGET $TRG
+    fi
+    mkdir -p $TARGET
+    cd $TARGET
+    tar xf $TAR >/dev/null 2>&1
+    CreateLink $TARGET/run_$FLUTTER_APP1 $BIN_BASE/run_$FLUTTER_APP1
+    CreateLink $TARGET/dart/$ARCH/$DART_APP1 $BIN_BASE/$DART_APP1
+  fi
+fi
+data=<<"===END-SCRIPT-AND_TAR==="

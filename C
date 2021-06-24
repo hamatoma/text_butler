@@ -1,0 +1,7 @@
+#! /bin/bash
+APP=text_slave
+ARCH=$(uname -m)
+TARGET=tools/skeleton/dart/$ARCH/$APP
+mkdir -p $(dirname $TARGET)
+dart compile exe lib/$APP.dart -o $TARGET
+ls -ld $TARGET

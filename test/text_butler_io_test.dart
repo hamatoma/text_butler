@@ -19,7 +19,8 @@ void main() {
     test('error: not existing file', () {
       final butler = TextButlerIO();
       final fnTemp = '<not.existing!>';
-      expect(butler.execute('load output=input file="$fnTemp"'), 'missing file "$fnTemp"');
+      expect(butler.execute('load output=input file="$fnTemp"'),
+          'missing file "$fnTemp"');
     });
   });
   group('TextButlerIO-store', () {
@@ -38,7 +39,8 @@ void main() {
     });
     test('error: illegal filename', () {
       final butler = TextButlerIO();
-      expect(butler.execute('store input=input file="/tmp"'),
+      expect(
+          butler.execute('store input=input file="/tmp"'),
           'executeStore(): FileSystemException: Cannot open file, '
           "path = '/tmp' (OS Error: Is a directory, errno = 21)");
     });

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'app.dart';
 
+const VERSION = '0.2.0';
 void main() {
   runApp(MyApp());
 }
@@ -23,7 +24,7 @@ class MyApp extends StatelessWidget {
         // is not restarted.
         primarySwatch: Colors.blue,
       ),
-      home: MyHomePage(title: 'Flutter Demo Home Page'),
+      home: MyHomePage(title: 'TextButler $VERSION'),
     );
   }
 }
