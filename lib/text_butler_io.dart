@@ -49,7 +49,7 @@ class TextButlerIO extends TextButler {
       'output': paramBufferName,
     };
     final current = splitParameters(parameters, expected);
-    current.setIfUndefined('output', 'output');
+    current.setIfUndefined('output', 'input');
     checkParameters(current, expected);
     final filename = current.asString('file');
     File file2 = File(filename);

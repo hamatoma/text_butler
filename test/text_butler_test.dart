@@ -353,4 +353,12 @@ duplicate input=template count=3 offset=1 baseChar=A''';
 ''');
     });
   });
+  group('TextButler-interpreted text', () {
+    final butler = TextButler();
+    test('simple', () {
+      butler.buffers['name'] = 'Joe';
+      expect(butler.execute('copy text=i~"Hi ~[name]!"'), isNull);
+      expect(butler.getBuffer('output'), 'Hi Joe!');
+    });
+  });
 }

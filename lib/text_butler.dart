@@ -865,6 +865,7 @@ class TextButler {
         buffer.write(escChar);
         break;
       } else {
+        var processed = true;
         switch (value[ix + 1]) {
           case 'n':
             buffer.write('\n');
@@ -881,12 +882,33 @@ class TextButler {
           case 'v':
             buffer.write('\v');
             break;
+          case '[':
+            final ixEnd = value.indexOf(']', ix + 1);
+            if (ixEnd <= 0) {
+              processed = false;
+            } else {
+              final bufferName = value.substring(ix + 2, ixEnd);
+              if (!buffers.containsKey(bufferName)) {
+                processed = false;
+              } else {
+                buffer.write(getBuffer(bufferName));
+                ix += bufferName.length + 1;
+              }
+            }
+            break;
           default:
             buffer.write(value[ix + 1]);
             break;
         }
-        ix = value.indexOf(escChar, lastIx = ix + 2);
+        if (processed) {
+          ix = value.indexOf(escChar, lastIx = ix + 2);
+        } else {
+          ix = value.indexOf(escChar, ix + 2);
+        }
       }
+    }
+    if (lastIx < value.length) {
+      buffer.write(value.substring(lastIx));
     }
     return buffer.toString();
   }
