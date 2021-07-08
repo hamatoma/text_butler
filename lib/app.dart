@@ -249,10 +249,10 @@ class _MyHomePageState extends State<MyHomePage> {
 
     // Height (without SafeArea)
     var padding = MediaQuery.of(context).padding;
-    double height1 = height - padding.top - padding.bottom;
+    //double height1 = height - padding.top - padding.bottom;
 
     // Height (without status bar)
-    double height2 = height - padding.top;
+    //double height2 = height - padding.top;
 
     // Height (without status and toolbar)
     double height3 = height - padding.top - kToolbarHeight;
@@ -266,7 +266,6 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void handleLayout(String input) {
-    var rc = false;
     RegExpMatch? match;
     if ((match = regExpLayout.firstMatch(input)) != null) {
       _ratio = double.parse(match!.group(1)!);

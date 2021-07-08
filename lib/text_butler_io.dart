@@ -48,7 +48,7 @@ class TextButlerIO extends TextButler {
       'file': paramString,
       'output': paramBufferName,
     };
-    final current = splitParameters(parameters, expected);
+    final current = splitParameters(expected);
     current.setIfUndefined('output', 'input');
     checkParameters(current, expected);
     final filename = current.asString('file');
@@ -68,7 +68,7 @@ class TextButlerIO extends TextButler {
       'file': paramString,
       'input': paramBufferName,
     };
-    final current = splitParameters(parameters, expected);
+    final current = splitParameters(expected);
     current.setIfUndefined('input', 'output');
     checkParameters(current, expected);
     final filename = current.asString('file');

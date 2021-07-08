@@ -1,4 +1,4 @@
-typedef MapParameter = Map<String, String?>;
+typedef MapParameter = Map<String, ParameterValue>;
 
 typedef MapParameterInfo = Map<String, ParameterInfo>;
 
@@ -71,7 +71,10 @@ class ParameterSet {
 
   /// Returns a parameter given by [name] as an integer.
   bool asBool(String name) {
-    bool rc = map.containsKey(name) && (map[name] == null || map[name] == 'T');
+    bool rc = map.containsKey(name);
+    if (rc && (map[name]!.parameterType != ParameterType.bool)) {
+      throw InternalError('ParameterSet.asBool()', 'not a bool: $name');
+    }
     return rc;
   }
 
@@ -80,11 +83,7 @@ class ParameterSet {
     if (!map.containsKey(name)) {
       throw InternalError('ParameterSet.asInt', 'unknown parameter $name');
     }
-    int? rc = int.tryParse(map[name]!);
-    if (rc == null) {
-      throw InternalError(
-          'ParameterSet.asInt', 'not an int: parameter "$name"');
-    }
+    int rc = map[name]!.asInt();
     return rc;
   }
 
@@ -114,17 +113,44 @@ class ParameterSet {
     int? rc;
     if (!hasParameter(name)) {
       if (defaultValue == null) {
-        throw WordingError('missing parameter $name');
+        throw WordingError('missing parameter "$name"');
       } else {
         rc = defaultValue;
       }
     }
     if (rc == null) {
-      String item = asListMember(name, index);
-      rc = int.tryParse(item);
-      if (rc == null) {
-        throw WordingError('parameter "$name" contains a non integer: $item');
+      final list = map[name]!.intList;
+      if (list == null) {
+        throw InternalError('asListMemberInt', 'not an intList: $name');
       }
+      if (index < 0 || index >= list.length) {
+        throw WordingError('wrong index $index in "$name');
+      }
+      rc = list[index];
+    }
+    return rc;
+  }
+
+  /// Returns a RegExp instance.
+  /// Throws [InternalError] on error.
+  RegExp asRegExp(String name) {
+    if (!map.containsKey(name)) {
+      throw InternalError('ParameterSet.asInt', 'unknown parameter $name');
+    }
+    RegExp rc;
+    ParameterValue value = map['name']!;
+    switch (value.stringType) {
+      case StringType.regExp:
+      case StringType.string:
+        rc = RegExp(value.string!);
+        break;
+      case StringType.regExpIgnoreCase:
+      case StringType.stringIgnoreCase:
+        rc = RegExp(value.string!, caseSensitive: false);
+        break;
+      default:
+        throw InternalError(
+            'asRegExpr()', 'unexpected string type: ${value.stringType}');
     }
     return rc;
   }
@@ -141,7 +167,7 @@ class ParameterSet {
         throw InternalError('ParameterSet.asString', 'unknown parameter $name');
       }
     } else {
-      rc = map[name]!;
+      rc = map[name]!.asString();
     }
     return rc;
   }
@@ -183,12 +209,13 @@ class ParameterSet {
     final current = map[name]!;
     switch (info!.type) {
       case ParameterType.intList:
-        rc = current.split(',').length;
+        rc = current.asIntList().length;
         break;
-      case ParameterType.regExpList:
+      case ParameterType.patternList:
+        rc = current.asPatternList().length;
+        break;
       case ParameterType.stringList:
-        final separator = info.autoSeparator ? current[0] : ',';
-        rc = current.split(separator).length - (info.autoSeparator ? 1 : 0);
+        rc = current.asStringList().length;
         break;
       default:
         throw InternalError('countOfList()', 'not a list: $name');
@@ -203,9 +230,11 @@ class ParameterSet {
   }
 
   /// Sets a current parameter if it does not exist yet.
-  void setIfUndefined(String name, String? value) {
+  void setIfUndefined(String name, String? value,
+      [StringType stringType = StringType.string]) {
     if (!map.containsKey(name)) {
-      map[name] = value;
+      map[name] = ParameterValue(ParameterType.string,
+          stringType: stringType, string: value);
     }
   }
 
@@ -226,12 +255,73 @@ class ParameterSet {
 enum ParameterType {
   bool,
   int,
-  regExp,
+  intList,
+
+  /// pattern: string or regular expression
+  pattern,
+  patternList,
   string,
   stringList,
-  intList,
-  regExpList
 }
+
+class ParameterValue {
+  final ParameterType parameterType;
+  final StringType stringType;
+  String? string;
+  final List<ParameterValue>? list;
+  final List<List<ParameterValue>>? listOfList;
+  final List<int>? intList;
+  int? intValue;
+  ParameterValue(this.parameterType,
+      {this.stringType = StringType.undef,
+      this.string,
+      this.list,
+      this.listOfList,
+      this.intList,
+      this.intValue});
+  int asInt() {
+    if (parameterType != ParameterType.int) {
+      throw InternalError(
+          'ParameterValue.asInt()', 'parameter is $parameterType');
+    }
+    return int.parse(string!);
+  }
+
+  List<int> asIntList() {
+    if (parameterType != ParameterType.intList) {
+      throw InternalError(
+          'ParameterValue.asIntList()', 'parameter is $parameterType');
+    }
+    return intList!;
+  }
+
+  List<ParameterValue> asPatternList() {
+    if (parameterType != ParameterType.patternList) {
+      throw InternalError(
+          'ParameterValue.asPatternList()', 'parameter is $parameterType');
+    }
+    return list!;
+  }
+
+  String asString() {
+    if (parameterType != ParameterType.string &&
+        parameterType != ParameterType.pattern) {
+      throw InternalError(
+          'ParameterValue.asString()', 'parameter is $parameterType');
+    }
+    return string!;
+  }
+
+  List<ParameterValue> asStringList() {
+    if (parameterType != ParameterType.stringList) {
+      throw InternalError(
+          'ParameterValue.asStringList()', 'parameter is $parameterType');
+    }
+    return list!;
+  }
+}
+
+enum StringType { undef, regExp, regExpIgnoreCase, string, stringIgnoreCase }
 
 /// Implements a text processor that interprets "commands" to convert
 /// an input string into another.
@@ -272,16 +362,18 @@ class TextButler {
     '',
     'swap a=input b=output',
   ];
-  List<String> get examples => _examplesBasic;
   static final defaultBufferNames = ['input', 'history', 'output', 'examples'];
   static const patternBufferName = r'^[a-zA-Z]\w*$';
+  static final regExprNumber = RegExp('^\d+');
+  static final regExpNonSpaces = RegExp(r'^\S+');
+  static final regExprDelimiter = RegExp(r'^[_\W]');
   String? errorLineInfo;
   final commandNames = <String>[];
   final buffers = <String, String>{'output': '', 'input': '', 'history': ''};
   String? errorMessage;
+
   final regExpEndOfParameter = RegExp(r'[ =]');
   final regExprAutoSeparator = RegExp(r'[^a-zA-Z0-9]');
-
   final paramBool = ParameterInfo(ParameterType.bool);
   final paramBaseChar = ParameterInfo(ParameterType.string,
       defaultValue: 'A', minLength: 1, maxLength: 1, delimited: false);
@@ -304,21 +396,26 @@ class TextButler {
       minLength: 1,
       maxLength: 1,
       delimited: false);
-  final paramRegExpList =
-      ParameterInfo(ParameterType.regExpList, autoSeparator: true);
+  final paramPatternList =
+      ParameterInfo(ParameterType.patternList, autoSeparator: true);
   final paramOffset =
       ParameterInfo(ParameterType.int, defaultValue: '0', optional: false);
-  final paramRegExpr = ParameterInfo(ParameterType.regExp, minLength: 1);
+  final paramPattern = ParameterInfo(ParameterType.pattern, minLength: 1);
   final paramStep =
       ParameterInfo(ParameterType.int, optional: false, defaultValue: '1');
   final paramSteps = ParameterInfo(ParameterType.intList, delimited: false);
   final paramString = ParameterInfo(ParameterType.string);
+
   final paramStringListAutoSeparator = ParameterInfo(ParameterType.stringList,
       minLength: 2, autoSeparator: true);
+  // The input of splitParameters(). Not local: so parts of splitParameters()
+  // can be done in other methods.
   final paramStringMinLength1 =
       ParameterInfo(ParameterType.string, minLength: 1);
 
   var groupPattern = RegExp(r'%(\w+)%');
+
+  String stringParameters = '';
 
   TextButler() {
     for (var item in examples) {
@@ -331,6 +428,8 @@ class TextButler {
     buffers['examples'] = examples.join('\n');
   }
 
+  List<String> get examples => _examplesBasic;
+
   /// Tests whether the [current] parameters match the [expected].
   /// Throws [WordingErrors] on error.
   void checkParameters(ParameterSet current, MapParameterInfo expected) {
@@ -339,7 +438,8 @@ class TextButler {
       if (!current.hasParameter(entry.key) &&
           entry.value.defaultValue != null &&
           !entry.value.optional) {
-        current.map[entry.key] = entry.value.defaultValue;
+        current.map[entry.key] =
+            defaultValue(entry.value.defaultValue, entry.value.type);
       }
     }
     for (var name in current.map.keys) {
@@ -349,7 +449,8 @@ class TextButler {
         final expectedParameter = expected[name];
         var currentValue = current.map[name];
         if (expectedParameter!.defaultValue != null && currentValue == null) {
-          currentValue = current.map[name] = expectedParameter.defaultValue;
+          currentValue = current.map[name] = defaultValue(
+              expectedParameter.defaultValue, expectedParameter.type);
         }
         if (currentValue == null && !expectedParameter.optional) {
           throw WordingError('missing value for parameter "$name"');
@@ -360,16 +461,20 @@ class TextButler {
             break;
           case ParameterType.string:
             if (currentValue != null) {
-              if (currentValue.length < expectedParameter.minLength) {
+              if (currentValue.asString().length <
+                  expectedParameter.minLength) {
                 throw WordingError(
                     'parameter "$name" is too short (${expectedParameter.minLength}): $currentValue');
               }
-              if (currentValue.length > expectedParameter.maxLength) {
+              if (currentValue.asString().length >
+                  expectedParameter.maxLength) {
                 throw WordingError(
                     'parameter "$name" is too long (${expectedParameter.maxLength}): $currentValue');
               }
               if (expectedParameter.pattern != null &&
-                  expectedParameter.pattern!.firstMatch(currentValue) == null) {
+                  expectedParameter.pattern!
+                          .firstMatch(currentValue.asString()) ==
+                      null) {
                 final message = expectedParameter.patternError != null
                     ? expectedParameter.patternError
                     : 'wrong syntax in parameter "$name": $currentValue';
@@ -378,70 +483,15 @@ class TextButler {
             }
             break;
           case ParameterType.int:
+          case ParameterType.pattern:
+          case ParameterType.patternList:
+          case ParameterType.stringList:
+          case ParameterType.intList:
             if (currentValue == null) {
               throw WordingError('missing int value in parameter "$name"');
-            } else if (int.tryParse(currentValue) == null) {
+            } else if (currentValue.parameterType != ParameterType.int) {
               throw WordingError(
-                  'parameter "$name" must be an int not $currentValue');
-            }
-            break;
-          case ParameterType.regExp:
-            if (currentValue != null)
-              try {
-                RegExp(currentValue);
-              } on Exception catch (exc) {
-                throw WordingError(
-                    'wrong regular expression in parameter "$name": $exc');
-              }
-            break;
-          case ParameterType.regExpList:
-            if (currentValue != null) {
-              List<String> list;
-              if (expectedParameter.autoSeparator) {
-                if (currentValue.length < 2) {
-                  throw WordingError(
-                      'parameter "$name" is too short for auto-delimiter');
-                }
-                list = currentValue.substring(1).split(currentValue[0]);
-              } else {
-                list = currentValue.split(',');
-              }
-              for (var item in list) {
-                try {
-                  RegExp(item);
-                } on Exception catch (exc) {
-                  errorMessage =
-                      'wrong regular expression in parameter "$name": $exc [$item]';
-                }
-              }
-            }
-            break;
-          case ParameterType.stringList:
-            if (currentValue != null &&
-                expectedParameter.autoSeparator &&
-                regExprAutoSeparator.firstMatch(currentValue) == null) {
-              throw WordingError(
-                  'parameter "$name" must start with a separator, e.g. ",one,two"');
-            }
-            break;
-          case ParameterType.intList:
-            if (currentValue!.isEmpty && !expectedParameter.optional) {
-              throw WordingError('parameter "$name" is empty');
-            }
-            final list = currentValue.split(',');
-            for (var item in list) {
-              if (int.tryParse(item) == null) {
-                throw WordingError(
-                    'parameter "$name" has a non int $item in list: $currentValue');
-              }
-            }
-            if (list.length < expectedParameter.minLength) {
-              throw WordingError(
-                  'parameter "$name" has too few list entries (${expectedParameter.minLength}): $currentValue');
-            }
-            if (list.length > expectedParameter.maxLength) {
-              throw WordingError(
-                  'parameter "$name" has too many entries (${expectedParameter.maxLength}): $currentValue');
+                  'parameter "$name" must have the the type ${expectedParameter.type} not ${currentValue.parameterType}');
             }
             break;
         }
@@ -449,38 +499,57 @@ class TextButler {
     }
   }
 
+  ParameterValue defaultValue(String? defaultValue, ParameterType type) {
+    ParameterValue rc;
+    switch (type) {
+      case ParameterType.bool:
+      case ParameterType.intList:
+      case ParameterType.pattern:
+      case ParameterType.patternList:
+      case ParameterType.stringList:
+        throw InternalError('defaultValue()', 'unexpected type: $type');
+      case ParameterType.int:
+      case ParameterType.string:
+        rc = ParameterValue(type,
+            stringType: StringType.string, string: defaultValue);
+        break;
+    }
+    return rc;
+  }
+
   /// Executes the command [commandName] with the [parameters].
   /// This method must be overridden by classes to expand to other commands.
   bool dispatch(String? commandName, String parameters) {
     var toHistory = true;
+    stringParameters = parameters;
     switch (commandName) {
       case 'clear':
         toHistory = false;
-        executeClear(parameters);
+        executeClear();
         break;
       case 'copy':
-        executeCopy(parameters);
+        executeCopy();
         break;
       case 'count':
-        executeCount(parameters);
+        executeCount();
         break;
       case 'duplicate':
-        executeDuplicate(parameters);
+        executeDuplicate();
         break;
       case 'execute':
-        executeExecute(parameters);
+        executeExecute();
         break;
       case 'filter':
-        executeFilter(parameters);
+        executeFilter();
         break;
       case 'replace':
-        executeReplace(parameters);
+        executeReplace();
         break;
       case 'show':
-        executeShow(parameters);
+        executeShow();
         break;
       case 'swap':
-        executeSwap(parameters);
+        executeSwap();
         break;
       default:
         throw WordingError('unknown command: "$commandName"');
@@ -490,7 +559,7 @@ class TextButler {
 
   /// Executes a command.
   /// [command] is a command (with parameters) like "show what=buffers"
-  /// [input] is the string to manipulate.
+  /// [stringParameters] is the string to manipulate.
   /// Returns null on success, an error message otherwise.
   String? execute(String command) {
     errorMessage = null;
@@ -517,12 +586,13 @@ class TextButler {
 
   /// Implements the command "clear" specified by some [parameters].
   /// Throws an exception on errors.
-  void executeClear(String parameters) {
+  void executeClear() {
     // 'copy input=input output=output append',
     final expected = {
       'output': paramBufferName,
     };
-    final current = splitParameters(parameters, expected);
+
+    final current = splitParameters(expected);
     current.setIfUndefined('output', 'output');
     checkParameters(current, expected);
     final target = current.asString('output');
@@ -531,7 +601,7 @@ class TextButler {
 
   /// Implements the command "copy" specified by some [parameters].
   /// Throws an exception on errors.
-  void executeCopy(String parameters) {
+  void executeCopy() {
     // 'copy input=input output=output append',
     final expected = {
       'append': paramBool,
@@ -539,7 +609,7 @@ class TextButler {
       'output': paramBufferName,
       'text': paramString,
     };
-    final current = splitParameters(parameters, expected);
+    final current = splitParameters(expected);
     String content;
     current.setIfUndefined('output', 'output');
     if (current.hasParameter('text')) {
@@ -561,7 +631,7 @@ class TextButler {
 
   /// Implements the command "count" specified by some [parameters].
   /// Throws an exception on errors.
-  void executeCount(String parameters) {
+  void executeCount() {
     // r'count regexpr="\d+" output=count',
     final expected = {
       'append': paramBool,
@@ -570,10 +640,9 @@ class TextButler {
       'output': paramBufferName,
       'marker': paramMarker,
       'template': paramStringMinLength1,
-      'regexpr': paramRegExpr,
-      'what': paramString,
+      'what': paramPattern,
     };
-    final current = splitParameters(parameters, expected);
+    final current = splitParameters(expected);
     current.setIfUndefined('input', 'input');
     current.setIfUndefined('output', 'output');
     checkParameters(current, expected);
@@ -581,14 +650,9 @@ class TextButler {
     final source = getBuffer(current.asString('input'));
     final target = current.asString('output');
     var count = 0;
-    final ignoreCase = current.asBool('ignore');
     final append = current.asBool('append');
-    if (current.hasParameter('what')) {
-      current.map['regexpr'] = RegExp.escape(current.asString('what'));
-    }
-    count = RegExp(current.asString('regexpr'), caseSensitive: !ignoreCase)
-        .allMatches(source)
-        .length;
+    final regExp = current.asRegExp('what');
+    count = regExp.allMatches(source).length;
     final template = current.asString('template', defaultValue: '');
     final result = template.isEmpty
         ? count.toString()
@@ -598,7 +662,7 @@ class TextButler {
 
   /// Implements the command "duplicate" specified by some [parameters].
   /// Throws an exception on errors.
-  void executeDuplicate(String parameters) {
+  void executeDuplicate() {
     //     'duplicate count=5 var=# offset=-1 meta=% value=/%n/',
     final expected = {
       'append': paramBool,
@@ -615,7 +679,7 @@ class TextButler {
       'Steps': paramSteps,
       'Values': paramStringListAutoSeparator,
     };
-    final current = splitParameters(parameters, expected);
+    final current = splitParameters(expected);
     current.setIfUndefined('input', 'input');
     current.testSameListLength('Offsets', 'Steps');
     current.testSameListLength('Steps', 'ListValues');
@@ -633,12 +697,12 @@ class TextButler {
 
   /// Implements the command "execute" specified by some [parameters].
   /// Throws an exception on errors.
-  void executeExecute(String parameters) {
+  void executeExecute() {
     // 'execute input=filter_log',
     final expected = {
       'input': paramBufferName,
     };
-    final current = splitParameters(parameters, expected);
+    final current = splitParameters(expected);
     current.setIfUndefined('input', 'input');
     checkParameters(current, expected);
     final input = getBuffer(current.asString('input'));
@@ -654,23 +718,23 @@ class TextButler {
 
   /// Implements the command "replace" specified by some [parameters].
   /// Throws an exception on errors.
-  void executeFilter(String parameters) {
+  void executeFilter() {
     // r'filter start=/^Name: Miller/ end=/^Name:/ regexpr=/^\s*[^#\s] count=1/',
     // filter regexpr=/<(name|id|email>(.*?)</ meta=! template="!2: !1"'
     final expected = {
       'append': paramBool,
-      'end': paramRegExpr,
-      'filter': paramRegExpr,
-      'Filters': paramRegExpList,
+      'end': paramPattern,
+      'filter': paramPattern,
+      'Filters': paramPatternList,
       'input': paramBufferName,
       'meta': paramMeta,
       'output': paramBufferName,
       'repeat': paramIntDefault1,
-      'start': paramRegExpr,
+      'start': paramPattern,
       'template': paramString,
       'Templates': paramStringListAutoSeparator,
     };
-    final current = splitParameters(parameters, expected);
+    final current = splitParameters(expected);
     current.setIfUndefined('input', 'input');
     current.setIfUndefined('output', 'output');
     checkParameters(current, expected);
@@ -743,7 +807,7 @@ class TextButler {
 
   /// Implements the command "replace" specified by some [parameters].
   /// Throws an exception on errors.
-  void executeReplace(String parameters) {
+  void executeReplace() {
     // r'replace regexpr=/ (\d+)/ meta=\ with=": \0"',
     // r'replace what="Hello" value="*"',
     final expected = {
@@ -751,12 +815,9 @@ class TextButler {
       'input': paramBufferName,
       'output': paramBufferName,
       'meta': paramMeta,
-      'regexpr': paramRegExpr,
-      'value': paramString,
-      'with': paramRegExpr,
-      'what': paramString,
+      'What': paramPatternList,
     };
-    final current = splitParameters(parameters, expected);
+    final current = splitParameters(expected);
     current.setIfUndefined('input', 'input');
     current.setIfUndefined('output', 'output');
     checkParameters(current, expected);
@@ -767,24 +828,27 @@ class TextButler {
     if (current.hasParameter('regexpr')) {
       count = RegExp(current.asString('regexpr')).allMatches(source).length;
     } else {
+      final buffer = StringBuffer();
+      final value = current.asString('value');
       var start = 0;
+      var lastStart = 0;
       final pattern = current.asString('what');
       while ((start = source.indexOf(pattern, start)) >= 0) {
-        count++;
+        if (start > 0) {
+          buffer.write(source.substring(lastStart, start));
+        }
+        buffer.write(value);
+        start = lastStart = start + pattern.length;
       }
+      buffer.write(source.substring(lastStart));
+      final target = current.asString('output');
+      buffers[target] = buffer.toString();
     }
-    final template = current.asString('template', defaultValue: '');
-    store(
-        current,
-        template.isEmpty
-            ? count.toString()
-            : template.replaceAll(
-                current.asString('marker'), count.toString()));
   }
 
   /// Implements the command "replace" specified by some [parameters].
   /// Throws an exception on errors.
-  void executeShow(String parameters) {
+  void executeShow() {
     // 'show what=buffers',
     final expected = {
       'append': paramBool,
@@ -795,7 +859,7 @@ class TextButler {
           patternError: 'unknown value in "what". Use buffer',
           defaultValue: 'buffer'),
     };
-    final current = splitParameters(parameters, expected);
+    final current = splitParameters(expected);
     current.setIfUndefined('output', 'output');
     checkParameters(current, expected);
     final list = buffers.keys.toList();
@@ -805,13 +869,13 @@ class TextButler {
 
   /// Implements the command "swap" specified by some [parameters].
   /// Throws an exception on errors.
-  void executeSwap(String parameters) {
+  void executeSwap() {
     // 'swap a=input b=output',
     final expected = {
       'a': paramBufferName,
       'b': paramBufferName,
     };
-    final current = splitParameters(parameters, expected);
+    final current = splitParameters(expected);
     checkParameters(current, expected);
     final a = current.asString('a');
     final b = current.asString('b');
@@ -917,6 +981,80 @@ class TextButler {
   List<String> namesOf(MapParameterInfo expected) {
     final rc = expected.keys.toList(growable: false);
     return rc;
+  }
+
+  /// Parses an integer list into a ParameterValue instance.
+  /// [name] is the name of the parameter to parse.
+  /// The ParameterValue instance is stored in [map].
+  void parseIntList(String name, MapParameter map) {
+    final list = <int>[];
+    unshiftNonSpaces().split(',').map((e) {
+      final intValue = int.tryParse(e);
+      if (intValue == null) {
+        throw WordingError('parameter "$name": not an integer in intList: $e');
+      }
+      list.add(intValue);
+    });
+    final parameterValue = ParameterValue(ParameterType.intList, intList: list);
+    map[name] = parameterValue;
+  }
+
+  /// Parses a string or a pattern into a ParameterValue instance.
+  /// [name] is the name of the parameter to parse.
+  /// The ParameterValue instance is stored in [map] (if not null).
+  /// [isPattern]: if true a regular expression or a ignore case string is allowed.
+  ParameterValue parseString(String name, MapParameter? map, bool isPattern) {
+    String name2 = 'parameter "$name": ';
+    var stringType = StringType.string;
+    if (stringParameters.startsWith('R')) {
+      stringType = StringType.regExpIgnoreCase;
+    } else if (stringParameters.startsWith('r')) {
+      stringType = StringType.regExp;
+    } else if (stringParameters.startsWith('I')) {
+      stringType = StringType.stringIgnoreCase;
+    }
+    if (stringType != StringType.string) {
+      if (!isPattern) {
+        throw WordingError(
+            '$name2: reg. expr. or ignore case string is not meaningful here');
+      }
+      stringParameters = stringParameters.substring(1);
+    }
+    String delimiter;
+    String esc = '';
+    if (stringParameters.startsWith('i')) {
+      stringParameters = stringParameters.substring(1);
+      esc = unshiftChar('$name2: esc character', regExprDelimiter);
+    }
+    delimiter = unshiftChar('$name2: delimiter', regExprDelimiter);
+    final ix = stringParameters.indexOf(delimiter);
+    if (ix < 0) {
+      throw WordingError('$name2: missing trailing delimiter "$delimiter"');
+    }
+    final rc = ParameterValue(ParameterType.pattern,
+        stringType: stringType, string: stringParameters.substring(0, ix));
+    stringParameters = stringParameters.substring(rc.string!.length + 1);
+    if (esc.isNotEmpty) {
+      rc.string = interpolateString(esc, rc.string!);
+    }
+    return rc;
+  }
+
+  /// Parses a pattern list into a ParameterValue instance.
+  /// [name] is the name of the parameter to parse.
+  /// [isPattern]: true: patterns are allowed. false: only strings are allowed.
+  /// The ParameterValue instance is stored in [map].
+  void parseStringList(String name, MapParameter map,
+      {bool isPattern = false}) {
+    String separator =
+        unshiftChar('parameter "$name": separator', regExprAutoSeparator);
+    final list = <ParameterValue>[];
+    var again = true;
+    while (again) {
+      list.add(parseString(name, null, isPattern));
+      again = stringParameters.startsWith(separator);
+    }
+    map[name] = ParameterValue(ParameterType.patternList, list: list);
   }
 
   /// Replaces the templates in the 'filter' command.
@@ -1063,16 +1201,17 @@ class TextButler {
   }
 
   /// Splits the command into [parameters].
-  /// [input] contains a list of parameters, e.g. 'rexp=/\d/ value="123"
-  /// [parameters]: OUT the parameters will be stored in this map.
-  /// Returns true on success or false otherwise: the error message is in [errorMessage].
-  ParameterSet splitParameters(String input, MapParameterInfo expected) {
+  /// [expected]: the meta data of the parameters of the related command.
+  /// [stringParameters] contains a list of parameters, e.g. 'rexp=/\d/ value="123"
+  /// Returns the description of the parameters as ParameterSet instance.
+  ParameterSet splitParameters(MapParameterInfo expected) {
     String abbreviation = '';
     final MapParameter map = {};
     final parameterNames = namesOf(expected);
-    while (errorMessage == null && input.isNotEmpty) {
+    while (errorMessage == null && stringParameters.isNotEmpty) {
       final name = expandParameter(
-          abbreviation = input.split(regExpEndOfParameter)[0], parameterNames);
+          abbreviation = stringParameters.split(regExpEndOfParameter)[0],
+          parameterNames);
       if (name == null) {
         throw InternalError('splitParameter()', 'cannot expand $name');
       }
@@ -1080,49 +1219,93 @@ class TextButler {
         throw InternalError('splitParameter()', 'not in expected: $name');
       }
       final expectedParameter = expected[name]!;
-      input = input.substring(abbreviation.length);
-      String? value;
-      if (!input.startsWith('=')) {
-        input = input.trimLeft();
+      stringParameters = stringParameters.substring(abbreviation.length);
+      if (!stringParameters.startsWith('=')) {
+        stringParameters = stringParameters.trimLeft();
+        if (expectedParameter.type != ParameterType.bool) {
+          throw WordingError('parameter "$name" needs "="');
+        }
       } else {
-        input = input.substring(1);
-        if (!expectedParameter.delimited) {
-          value = input.split(' ')[0];
-          input = input.substring(value.length).trimLeft();
-        } else if (input.isEmpty) {
-          throw WordingError('missing starting delimiter for $name');
-        } else {
-          final interpolate = input.startsWith('i');
-          String delimiter;
-          String? escChar;
-          if (!interpolate) {
-            delimiter = input[0];
-            input = input.substring(1);
-          } else {
-            if (input.length < 4) {
+        stringParameters = stringParameters.substring(1);
+        switch (expectedParameter.type) {
+          case ParameterType.bool:
+            throw InternalError('splitParameters()',
+                'unexpected type: ${expectedParameter.type}');
+          case ParameterType.int:
+            final match = regExprNumber.firstMatch(stringParameters);
+            if (match == null) {
               throw WordingError(
-                  'interpolated string to short: at least ESC character and two delimiters expected');
+                  'parameter "$name": int expected, not ${stringParameters.substring(0, 5)}');
             }
-            escChar = input[1];
-            delimiter = input[2];
-            input = input.substring(3);
-          }
-          final index = input.indexOf(delimiter);
-          if (index < 0) {
-            throw WordingError(
-                'missing end delimiter $delimiter for parameter "$name"');
-          } else {
-            value = input.substring(0, index);
-            if (interpolate) {
-              value = interpolateString(escChar!, value);
+            map[name] = ParameterValue(ParameterType.int,
+                intValue: int.parse(match.group(0)!));
+            stringParameters =
+                stringParameters.substring(match.group(0)!.length).trimLeft();
+            break;
+          case ParameterType.intList:
+            parseIntList(name, map);
+            break;
+          case ParameterType.pattern:
+            parseString(name, map, true);
+            break;
+          case ParameterType.patternList:
+            parseStringList(name, map, isPattern: true);
+            break;
+          case ParameterType.string:
+            if (expectedParameter.delimited) {
+              parseString(name, map, false);
+            } else {
+              map[name] = ParameterValue(ParameterType.string,
+                  string: unshiftNonSpaces());
             }
-            input = input.substring(index + 1).trimLeft();
-          }
+            break;
+          case ParameterType.stringList:
+            parseStringList(name, map, isPattern: false);
+            break;
         }
       }
-      map[name] = value;
     }
     return ParameterSet(map, this, expected);
+  }
+
+  /// Stores the given [content] into the buffer specified by parameter "output"
+  /// depending on the parameter "append".
+  void store(ParameterSet current, String content) {
+    final target = current.asString('output');
+    if (current.asBool('append')) {
+      buffers[target] = getBuffer(target) + content;
+    } else {
+      buffers[target] = content;
+    }
+  }
+
+  /// Returns the first character from [stringParameters] and remove it.
+  /// [error] is the error message, if no character is available.
+  /// [pattern]: null or a regular expression to validate the character.
+  String unshiftChar(String error, RegExp? pattern) {
+    if (stringParameters.isEmpty) {
+      throw WordingError('$error (too short)');
+    }
+    final rc = stringParameters[0];
+    stringParameters = stringParameters.substring(1);
+    if (pattern != null && pattern.firstMatch(rc) == null) {
+      throw WordingError('$error (not allowed character: $rc');
+    }
+    return rc;
+  }
+
+  /// Returns all non spaces from the top of [stringParameters].
+  /// That string is than removed from [stringParameters].
+  String unshiftNonSpaces() {
+    RegExpMatch? match = regExpNonSpaces.firstMatch(stringParameters);
+    String rc;
+    if (match == null) {
+      rc = '';
+    } else {
+      rc = match.group(0)!;
+      stringParameters = stringParameters.substring(rc.length).trimLeft();
+    }
+    return rc;
   }
 
   /// Returns the full name of a command, given as abbreviation.
@@ -1155,17 +1338,6 @@ class TextButler {
       throw WordingError(error);
     }
     return rc;
-  }
-
-  /// Stores the given [content] into the buffer specified by parameter "output"
-  /// depending on the parameter "append".
-  void store(ParameterSet current, String content) {
-    final target = current.asString('output');
-    if (current.asBool('append')) {
-      buffers[target] = getBuffer(target) + content;
-    } else {
-      buffers[target] = content;
-    }
   }
 }
 

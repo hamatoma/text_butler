@@ -6,8 +6,13 @@ void main() {
     final butler = TextButler();
     final set = ParameterSet(
         {
-          'intList': '10,19',
-          'stringList': ',adam,berta,charly',
+          'intList': ParameterValue(ParameterType.intList, intList: [10, 19]),
+          'stringList':
+              ParameterValue(ParameterType.stringList, list: <ParameterValue>[
+            ParameterValue(ParameterType.string, string: 'adam'),
+            ParameterValue(ParameterType.string, string: 'berta'),
+            ParameterValue(ParameterType.string, string: 'charly'),
+          ])
         },
         butler,
         {
@@ -52,10 +57,8 @@ void main() {
     final names2 = butler.namesOf(expected2);
     test('splitArguments', () {
       ParameterSet set;
-      expect(
-          set = butler.splitParameters(
-              'meta=% app value=/a b/ Values=",one,two"', expected2),
-          isNotNull);
+      butler.stringParameters = 'meta=% app value=/a b/ Values=,"one","two"';
+      expect(set = butler.splitParameters(expected2), isNotNull);
       expect(set.map, <String, String?>{
         'meta': '%',
         'append': null,
@@ -89,41 +92,39 @@ void main() {
       }
     });
     test('checkParameters-success', () {
-      butler.checkParameters(
-          butler.splitParameters(
-              'name="Jonny" number=24 boolean stringList=,one,two intList=2,4',
-              expected),
-          expected);
+      butler.stringParameters =
+          'name="Jonny" number=24 boolean stringList=,one,two intList=2,4';
+      butler.checkParameters(butler.splitParameters(expected), expected);
       expect(butler.errorMessage, isNull);
     });
     test('checkParameters-string-errors', () {
       try {
-        butler.checkParameters(
-            butler.splitParameters('name=?Wr.name?', expected), expected);
+        butler.stringParameters = 'name=?Wr.name?';
+        butler.checkParameters(butler.splitParameters(expected), expected);
         expect('missing WordingError', isNull);
       } on WordingError catch (exc) {
         expect(exc.message,
             'not a name: only letters are allowed, starting with upper case');
       }
       try {
-        butler.checkParameters(
-            butler.splitParameters('name="K"', expected), expected);
+        butler.stringParameters = 'name="K"';
+        butler.checkParameters(butler.splitParameters(expected), expected);
         expect('missing WordingError', isNull);
       } on WordingError catch (exc) {
         expect(exc.message, 'parameter "name" is too short (2): K');
       }
       try {
-        butler.checkParameters(
-            butler.splitParameters('name="VeryLongName"', expected), expected);
+        butler.stringParameters = 'name="VeryLongName"';
+        butler.checkParameters(butler.splitParameters(expected), expected);
         expect('missing WordingError', isNull);
       } on WordingError catch (exc) {
         expect(exc.message, 'parameter "name" is too long (8): VeryLongName');
       }
     });
     test('checkParameters-int-error', () {
+      butler.stringParameters = 'number=one';
       try {
-        butler.checkParameters(
-            butler.splitParameters('number=one', expected), expected);
+        butler.checkParameters(butler.splitParameters(expected), expected);
         expect('missing WordingError', isNull);
       } on WordingError catch (exc) {
         expect(exc.message, 'parameter "number" must be an int not one');
@@ -131,8 +132,8 @@ void main() {
     });
     test('checkParameters-stringList-error', () {
       try {
-        butler.checkParameters(
-            butler.splitParameters('stringList=one', expected), expected);
+        butler.stringParameters = 'stringList=one';
+        butler.checkParameters(butler.splitParameters(expected), expected);
         expect('missing WordingError', isNull);
       } on WordingError catch (exc) {
         expect(exc.message,
@@ -141,8 +142,8 @@ void main() {
     });
     test('checkParameters-intList-error', () {
       try {
-        butler.checkParameters(
-            butler.splitParameters('intList=one,two', expected), expected);
+        butler.stringParameters = 'intList=one,two';
+        butler.checkParameters(butler.splitParameters(expected), expected);
         expect('missing WordingError', isNull);
       } on WordingError catch (exc) {
         expect(exc.message,
@@ -336,6 +337,36 @@ name: Berta
   });
   group('TextButler-execute', () {
     final butler = TextButler();
+    test('sql-replace', () {
+      butler.buffers['sql'] = '''SELECT
+  pp.project_title, pp.project_end,
+  (SELECT sum(workinghour_hours) 
+    FROM workinghours w2 WHERE w2.workinghour_id = ww.workinghour_id) AS hours
+FROM projects pp
+  LEFT JOIN workinghours ww ON ww.project_id=pp.project_id
+WHERE
+  ww.workinghour_start >= :from AND ww.workinghour_start < :to
+  AND pp.project_customerid = :customer
+;
+''';
+      butler.buffers['input'] =
+          '''replace i=sql what=":from" value="'2021-06-01'"
+replace i=output what=":to" value="'2021-07-01'"
+replace i=output what=':customer' value="1133"
+''';
+      expect(butler.execute('execute'), isNull);
+      expect(butler.getBuffer('output'), '''SELECT
+  pp.project_title, pp.project_end,
+  (SELECT sum(workinghour_hours) 
+    FROM workinghours w2 WHERE w2.workinghour_id = ww.workinghour_id) AS hours
+FROM projects pp
+  LEFT JOIN workinghours ww ON ww.project_id=pp.project_id
+WHERE
+  ww.workinghour_start >= '2021-06-01' AND ww.workinghour_start < '2021-07-01'
+  AND pp.project_customerid = 1133
+;
+''');
+    });
     test('simple', () {
       butler.buffers['input'] = '''copy out=script text="Hi "
 copy append out=script text="world"''';
