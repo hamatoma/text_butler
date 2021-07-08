@@ -55,7 +55,7 @@ class ParameterInfo {
       this.pattern,
       this.autoSeparator = false,
       this.patternError}) {
-    if (type == ParameterType.int || type == ParameterType.intList) {
+    if (type == ParameterType.nat || type == ParameterType.natList) {
       this.delimited = false;
     }
   }
@@ -138,15 +138,17 @@ class ParameterSet {
       throw InternalError('ParameterSet.asInt', 'unknown parameter $name');
     }
     RegExp rc;
-    ParameterValue value = map['name']!;
+    ParameterValue value = map[name]!;
     switch (value.stringType) {
       case StringType.regExp:
       case StringType.string:
         rc = RegExp(value.string!);
         break;
       case StringType.regExpIgnoreCase:
-      case StringType.stringIgnoreCase:
         rc = RegExp(value.string!, caseSensitive: false);
+        break;
+      case StringType.stringIgnoreCase:
+        rc = RegExp(RegExp.escape(value.string!), caseSensitive: false);
         break;
       default:
         throw InternalError(
@@ -208,7 +210,7 @@ class ParameterSet {
     final info = expected[name];
     final current = map[name]!;
     switch (info!.type) {
-      case ParameterType.intList:
+      case ParameterType.natList:
         rc = current.asIntList().length;
         break;
       case ParameterType.patternList:
@@ -254,8 +256,10 @@ class ParameterSet {
 
 enum ParameterType {
   bool,
-  int,
-  intList,
+
+  /// non negative integer
+  nat,
+  natList,
 
   /// pattern: string or regular expression
   pattern,
@@ -271,24 +275,24 @@ class ParameterValue {
   final List<ParameterValue>? list;
   final List<List<ParameterValue>>? listOfList;
   final List<int>? intList;
-  int? intValue;
+  int? natValue;
   ParameterValue(this.parameterType,
       {this.stringType = StringType.undef,
       this.string,
       this.list,
       this.listOfList,
       this.intList,
-      this.intValue});
+      this.natValue});
   int asInt() {
-    if (parameterType != ParameterType.int) {
+    if (parameterType != ParameterType.nat) {
       throw InternalError(
           'ParameterValue.asInt()', 'parameter is $parameterType');
     }
-    return int.parse(string!);
+    return natValue!;
   }
 
   List<int> asIntList() {
-    if (parameterType != ParameterType.intList) {
+    if (parameterType != ParameterType.natList) {
       throw InternalError(
           'ParameterValue.asIntList()', 'parameter is $parameterType');
     }
@@ -318,6 +322,44 @@ class ParameterValue {
           'ParameterValue.asStringList()', 'parameter is $parameterType');
     }
     return list!;
+  }
+
+  @override
+  String toString() {
+    String rc;
+    switch (parameterType) {
+      case ParameterType.bool:
+        rc = '[bool]';
+        break;
+      case ParameterType.nat:
+        rc = '[nat]: $int';
+        break;
+      case ParameterType.natList:
+        rc = intList!.fold(
+            '[natList]',
+            (previousValue, element) =>
+                previousValue + ' ' + element.toString());
+        break;
+      case ParameterType.pattern:
+        rc = '[pattern]: $string';
+        break;
+      case ParameterType.patternList:
+        rc = intList!.fold(
+            '[patternList]',
+            (previousValue, element) =>
+                previousValue + ' ' + element.toString());
+        break;
+      case ParameterType.string:
+        rc = '[string]: $string';
+        break;
+      case ParameterType.stringList:
+        rc = intList!.fold(
+            '[stringList]',
+            (previousValue, element) =>
+                previousValue + ' ' + element.toString());
+        break;
+    }
+    return rc;
   }
 }
 
@@ -364,7 +406,7 @@ class TextButler {
   ];
   static final defaultBufferNames = ['input', 'history', 'output', 'examples'];
   static const patternBufferName = r'^[a-zA-Z]\w*$';
-  static final regExprNumber = RegExp('^\d+');
+  static final regExprNumber = RegExp(r'^\d+');
   static final regExpNonSpaces = RegExp(r'^\S+');
   static final regExprDelimiter = RegExp(r'^[_\W]');
   String? errorLineInfo;
@@ -385,9 +427,9 @@ class TextButler {
       patternError: 'wrong buffer name: only letters allowed',
       delimited: false);
   final paramIntDefault1 =
-      ParameterInfo(ParameterType.int, defaultValue: '1', optional: false);
-  final paramIntList = ParameterInfo(ParameterType.intList, delimited: false);
-  final paramIntNeeded = ParameterInfo(ParameterType.int, optional: false);
+      ParameterInfo(ParameterType.nat, defaultValue: '1', optional: false);
+  final paramIntList = ParameterInfo(ParameterType.natList, delimited: false);
+  final paramIntNeeded = ParameterInfo(ParameterType.nat, optional: false);
   final paramMarker = ParameterInfo(ParameterType.string,
       defaultValue: '#', minLength: 1, optional: false);
   final paramMeta = ParameterInfo(ParameterType.string,
@@ -399,11 +441,11 @@ class TextButler {
   final paramPatternList =
       ParameterInfo(ParameterType.patternList, autoSeparator: true);
   final paramOffset =
-      ParameterInfo(ParameterType.int, defaultValue: '0', optional: false);
+      ParameterInfo(ParameterType.nat, defaultValue: '0', optional: false);
   final paramPattern = ParameterInfo(ParameterType.pattern, minLength: 1);
   final paramStep =
-      ParameterInfo(ParameterType.int, optional: false, defaultValue: '1');
-  final paramSteps = ParameterInfo(ParameterType.intList, delimited: false);
+      ParameterInfo(ParameterType.nat, optional: false, defaultValue: '1');
+  final paramSteps = ParameterInfo(ParameterType.natList, delimited: false);
   final paramString = ParameterInfo(ParameterType.string);
 
   final paramStringListAutoSeparator = ParameterInfo(ParameterType.stringList,
@@ -482,14 +524,14 @@ class TextButler {
               }
             }
             break;
-          case ParameterType.int:
+          case ParameterType.nat:
           case ParameterType.pattern:
           case ParameterType.patternList:
           case ParameterType.stringList:
-          case ParameterType.intList:
+          case ParameterType.natList:
             if (currentValue == null) {
-              throw WordingError('missing int value in parameter "$name"');
-            } else if (currentValue.parameterType != ParameterType.int) {
+              throw WordingError('missing value of parameter "$name"');
+            } else if (currentValue.parameterType != expectedParameter.type) {
               throw WordingError(
                   'parameter "$name" must have the the type ${expectedParameter.type} not ${currentValue.parameterType}');
             }
@@ -503,12 +545,22 @@ class TextButler {
     ParameterValue rc;
     switch (type) {
       case ParameterType.bool:
-      case ParameterType.intList:
+      case ParameterType.natList:
       case ParameterType.pattern:
       case ParameterType.patternList:
       case ParameterType.stringList:
         throw InternalError('defaultValue()', 'unexpected type: $type');
-      case ParameterType.int:
+      case ParameterType.nat:
+        if (defaultValue == null){
+          throw InternalError('defaultValue()', 'defaultValue is null');
+        }
+        final value = int.tryParse(defaultValue);
+        if (value == null){
+          throw InternalError('defaultValue()', 'defaultValue is not a nat: $value');
+        }
+        rc = ParameterValue(type,
+            stringType: StringType.undef, natValue: value);
+        break;
       case ParameterType.string:
         rc = ParameterValue(type,
             stringType: StringType.string, string: defaultValue);
@@ -646,7 +698,6 @@ class TextButler {
     current.setIfUndefined('input', 'input');
     current.setIfUndefined('output', 'output');
     checkParameters(current, expected);
-    current.checkExactlyOneOf('regexpr', 'what');
     final source = getBuffer(current.asString('input'));
     final target = current.asString('output');
     var count = 0;
@@ -988,14 +1039,16 @@ class TextButler {
   /// The ParameterValue instance is stored in [map].
   void parseIntList(String name, MapParameter map) {
     final list = <int>[];
-    unshiftNonSpaces().split(',').map((e) {
-      final intValue = int.tryParse(e);
+    final list2 = unshiftNonSpaces().split(',');
+    for (var item in list2) {
+      final intValue = int.tryParse(item);
       if (intValue == null) {
-        throw WordingError('parameter "$name": not an integer in intList: $e');
+        throw WordingError(
+            'parameter "$name": not a non negative number in natList: $item');
       }
       list.add(intValue);
-    });
-    final parameterValue = ParameterValue(ParameterType.intList, intList: list);
+    }
+    final parameterValue = ParameterValue(ParameterType.natList, intList: list);
     map[name] = parameterValue;
   }
 
@@ -1031,9 +1084,14 @@ class TextButler {
     if (ix < 0) {
       throw WordingError('$name2: missing trailing delimiter "$delimiter"');
     }
-    final rc = ParameterValue(ParameterType.pattern,
-        stringType: stringType, string: stringParameters.substring(0, ix));
-    stringParameters = stringParameters.substring(rc.string!.length + 1);
+    final rc = ParameterValue(
+        isPattern ? ParameterType.pattern : ParameterType.string,
+        stringType: stringType,
+        string: stringParameters.substring(0, ix));
+    if (map != null) {
+      map[name] = rc;
+    }
+    stringParameters = stringParameters.substring(ix + 1);
     if (esc.isNotEmpty) {
       rc.string = interpolateString(esc, rc.string!);
     }
@@ -1053,8 +1111,13 @@ class TextButler {
     while (again) {
       list.add(parseString(name, null, isPattern));
       again = stringParameters.startsWith(separator);
+      if (again) {
+        stringParameters = stringParameters.substring(1);
+      }
     }
-    map[name] = ParameterValue(ParameterType.patternList, list: list);
+    map[name] = ParameterValue(
+        isPattern ? ParameterType.patternList : ParameterType.stringList,
+        list: list);
   }
 
   /// Replaces the templates in the 'filter' command.
@@ -1221,6 +1284,7 @@ class TextButler {
       final expectedParameter = expected[name]!;
       stringParameters = stringParameters.substring(abbreviation.length);
       if (!stringParameters.startsWith('=')) {
+        map[name] = ParameterValue(ParameterType.bool);
         stringParameters = stringParameters.trimLeft();
         if (expectedParameter.type != ParameterType.bool) {
           throw WordingError('parameter "$name" needs "="');
@@ -1231,18 +1295,21 @@ class TextButler {
           case ParameterType.bool:
             throw InternalError('splitParameters()',
                 'unexpected type: ${expectedParameter.type}');
-          case ParameterType.int:
+          case ParameterType.nat:
             final match = regExprNumber.firstMatch(stringParameters);
             if (match == null) {
+              final head = stringParameters.length > 5
+                  ? stringParameters.substring(0, 5)
+                  : stringParameters;
               throw WordingError(
-                  'parameter "$name": int expected, not ${stringParameters.substring(0, 5)}');
+                  'parameter "$name": non negative number expected, not $head');
             }
-            map[name] = ParameterValue(ParameterType.int,
-                intValue: int.parse(match.group(0)!));
+            map[name] = ParameterValue(ParameterType.nat,
+                natValue: int.parse(match.group(0)!));
             stringParameters =
                 stringParameters.substring(match.group(0)!.length).trimLeft();
             break;
-          case ParameterType.intList:
+          case ParameterType.natList:
             parseIntList(name, map);
             break;
           case ParameterType.pattern:
@@ -1263,6 +1330,7 @@ class TextButler {
             parseStringList(name, map, isPattern: false);
             break;
         }
+        stringParameters = stringParameters.trimLeft();
       }
     }
     return ParameterSet(map, this, expected);
@@ -1289,7 +1357,7 @@ class TextButler {
     final rc = stringParameters[0];
     stringParameters = stringParameters.substring(1);
     if (pattern != null && pattern.firstMatch(rc) == null) {
-      throw WordingError('$error (not allowed character: $rc');
+      throw WordingError('$error not allowed character: $rc');
     }
     return rc;
   }

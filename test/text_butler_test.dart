@@ -6,7 +6,7 @@ void main() {
     final butler = TextButler();
     final set = ParameterSet(
         {
-          'intList': ParameterValue(ParameterType.intList, intList: [10, 19]),
+          'intList': ParameterValue(ParameterType.natList, intList: [10, 19]),
           'stringList':
               ParameterValue(ParameterType.stringList, list: <ParameterValue>[
             ParameterValue(ParameterType.string, string: 'adam'),
@@ -16,8 +16,8 @@ void main() {
         },
         butler,
         {
-          'intList': ParameterInfo(ParameterType.intList, delimited: false),
-          'intList2': ParameterInfo(ParameterType.intList, delimited: false),
+          'intList': ParameterInfo(ParameterType.natList, delimited: false),
+          'intList2': ParameterInfo(ParameterType.natList, delimited: false),
           'stringList': ParameterInfo(ParameterType.stringList,
               delimited: false, autoSeparator: true),
         });
@@ -40,11 +40,11 @@ void main() {
           pattern: RegExp(r'^[A-Z][a-z]*$'),
           patternError:
               'not a name: only letters are allowed, starting with upper case'),
-      'number': ParameterInfo(ParameterType.int),
+      'number': ParameterInfo(ParameterType.nat),
       'stringList': ParameterInfo(ParameterType.stringList,
           minLength: 1, maxLength: 2, autoSeparator: true, delimited: false),
       'intList':
-          ParameterInfo(ParameterType.intList, minLength: 1, maxLength: 2),
+          ParameterInfo(ParameterType.natList, minLength: 1, maxLength: 2),
       'boolean': ParameterInfo(ParameterType.bool),
     };
     final expected2 = <String, ParameterInfo>{
@@ -59,12 +59,11 @@ void main() {
       ParameterSet set;
       butler.stringParameters = 'meta=% app value=/a b/ Values=,"one","two"';
       expect(set = butler.splitParameters(expected2), isNotNull);
-      expect(set.map, <String, String?>{
-        'meta': '%',
-        'append': null,
-        'value': 'a b',
-        'Values': ',one,two'
-      });
+      expect(set.map['meta']!.string, '%');
+      expect(set.map['append']!.parameterType, ParameterType.bool);
+      expect(set.map['value']!.string, 'a b');
+      expect(set.map['Values']!.list!.length, 2);
+      expect(set.map['Values']!.list![1].string, 'two');
       expect(butler.errorMessage, isNull);
     });
     test('expandParameter', () {
@@ -93,7 +92,7 @@ void main() {
     });
     test('checkParameters-success', () {
       butler.stringParameters =
-          'name="Jonny" number=24 boolean stringList=,one,two intList=2,4';
+          'name="Jonny" number=24 boolean stringList=,"one","two" intList=2,4';
       butler.checkParameters(butler.splitParameters(expected), expected);
       expect(butler.errorMessage, isNull);
     });
@@ -111,14 +110,14 @@ void main() {
         butler.checkParameters(butler.splitParameters(expected), expected);
         expect('missing WordingError', isNull);
       } on WordingError catch (exc) {
-        expect(exc.message, 'parameter "name" is too short (2): K');
+        expect(exc.message, 'parameter "name" is too short (2): [string]: K');
       }
       try {
         butler.stringParameters = 'name="VeryLongName"';
         butler.checkParameters(butler.splitParameters(expected), expected);
         expect('missing WordingError', isNull);
       } on WordingError catch (exc) {
-        expect(exc.message, 'parameter "name" is too long (8): VeryLongName');
+        expect(exc.message, 'parameter "name" is too long (8): [string]: VeryLongName');
       }
     });
     test('checkParameters-int-error', () {
@@ -127,7 +126,7 @@ void main() {
         butler.checkParameters(butler.splitParameters(expected), expected);
         expect('missing WordingError', isNull);
       } on WordingError catch (exc) {
-        expect(exc.message, 'parameter "number" must be an int not one');
+        expect(exc.message, 'parameter "number": non negative number expected, not one');
       }
     });
     test('checkParameters-stringList-error', () {
@@ -137,7 +136,7 @@ void main() {
         expect('missing WordingError', isNull);
       } on WordingError catch (exc) {
         expect(exc.message,
-            'parameter "stringList" must start with a separator, e.g. ",one,two"');
+            'parameter "stringList": separator not allowed character: o');
       }
     });
     test('checkParameters-intList-error', () {
@@ -147,7 +146,7 @@ void main() {
         expect('missing WordingError', isNull);
       } on WordingError catch (exc) {
         expect(exc.message,
-            'parameter "intList" has a non int one in list: one,two');
+            'parameter "intList": not a non negative number in natList: one');
       }
     });
   });
@@ -175,54 +174,6 @@ void main() {
       expect(
           butler.execute(r'copy text=i%"Hi!%n%t1%v2%f3%r" output=y'), isNull);
       expect(butler.buffers['y'], 'Hi!\n\t1\v2\f3\r');
-    });
-  });
-  group('TextButler-duplicate', () {
-    final butler = TextButler();
-    test('%valuesX%', () {
-      butler.buffers['input'] =
-          'animal %value0% named %value1% comes from %value2%.\n';
-      expect(
-          butler.execute(
-              'duplicate count=2 ListValues=";,cat,dog;,Mia,Harro;,London,Rome"'),
-          isNull);
-      expect(butler.buffers['output'],
-          'animal cat named Mia comes from London.\nanimal dog named Harro comes from Rome.\n');
-    });
-    test('%index% %number% %char%', () {
-      butler.buffers['input'] = 'no: %index% id: %number% place: %char%\n';
-      butler.buffers['output'] = '= List:\n';
-      expect(
-          butler.execute(
-              'duplicate count=2 offset=100 step=10 baseChar=Q append'),
-          isNull);
-      expect(butler.buffers['output'],
-          '= List:\nno: 0 id: 100 place: Q\nno: 1 id: 110 place: R\n');
-    });
-    test('!index! !number0! !char0! !char1!', () {
-      butler.buffers['input'] =
-          'no: !index! id: !number0! place !char0! key: !char1!!char1!!char1!\n';
-      expect(
-          butler.execute(
-              'duplicate count=3 Offsets=10,0 Steps=5,1 BaseChar="Ak" meta=! out=list'),
-          isNull);
-      expect(butler.buffers['list'],
-          'no: 0 id: 10 place A key: kkk\nno: 1 id: 15 place B key: lll\nno: 2 id: 20 place C key: mmm\n');
-    });
-    test('%numberX% %charX% value', () {
-      butler.buffers['input'] = 'abc %index% %char0% %number1% %value% 123\n';
-      expect(
-          butler.execute(
-              'duplicate count=2 Offsets=1,2 BaseChars="XX" Steps=1,10 Values=",one,two"'),
-          isNull);
-      expect(
-          butler.buffers['output'], 'abc 0 X 2 one 123\nabc 1 Y 12 two 123\n');
-    });
-    test('%number% %value%', () {
-      butler.buffers['input'] = 'animal %number%: %value%\n';
-      expect(butler.execute('duplicate count=2 offset=1 Values=",cat,dog"'),
-          isNull);
-      expect(butler.buffers['output'], 'animal 1: cat\nanimal 2: dog\n');
     });
   });
   group('TextButler-rest', () {
@@ -253,7 +204,7 @@ void main() {
     final butler = TextButler();
     test('"regexpr" is defined, default marker, template defined', () {
       butler.buffers['input'] = ' 123\n4 5';
-      expect(butler.execute(r'count regex=/ \d+/ template="count: #"'), isNull);
+      expect(butler.execute(r'count what=r/ \d+/ template="count: #"'), isNull);
       expect(butler.buffers['output'], 'count: 2');
     });
     test('"what" is defined, default template', () {
@@ -314,7 +265,7 @@ name: Berta
     test('Filters', () {
       expect(
           butler.execute('filter start=/<person/ end=!</person! '
-              'Filters=";<name;<id" repeat=2'),
+              'Filters=;"<name";"<id" repeat=2'),
           isNull);
       expect(butler.buffers['output'], '''    <id>1</id>
     <name>Adam</name>
@@ -350,9 +301,7 @@ WHERE
 ;
 ''';
       butler.buffers['input'] =
-          '''replace i=sql what=":from" value="'2021-06-01'"
-replace i=output what=":to" value="'2021-07-01'"
-replace i=output what=':customer' value="1133"
+          '''replace i=sql what=;":from";"'2021-06-01'";":to";"'2021-07-01'";':customer';"1133"
 ''';
       expect(butler.execute('execute'), isNull);
       expect(butler.getBuffer('output'), '''SELECT
@@ -390,6 +339,54 @@ duplicate input=template count=3 offset=1 baseChar=A''';
       butler.buffers['name'] = 'Joe';
       expect(butler.execute('copy text=i~"Hi ~[name]!"'), isNull);
       expect(butler.getBuffer('output'), 'Hi Joe!');
+    });
+  });
+  group('TextButler-duplicate', () {
+    final butler = TextButler();
+    test('%valuesX%', () {
+      butler.buffers['input'] =
+      'animal %value0% named %value1% comes from %value2%.\n';
+      expect(
+          butler.execute(
+              'duplicate count=2 ListValues=;,"cat","dog";,"Mia","Harro";,"London","Rome"'),
+          isNull);
+      expect(butler.buffers['output'],
+          'animal cat named Mia comes from London.\nanimal dog named Harro comes from Rome.\n');
+    });
+    test('%index% %number% %char%', () {
+      butler.buffers['input'] = 'no: %index% id: %number% place: %char%\n';
+      butler.buffers['output'] = '= List:\n';
+      expect(
+          butler.execute(
+              'duplicate count=2 offset=100 step=10 baseChar=Q append'),
+          isNull);
+      expect(butler.buffers['output'],
+          '= List:\nno: 0 id: 100 place: Q\nno: 1 id: 110 place: R\n');
+    });
+    test('!index! !number0! !char0! !char1!', () {
+      butler.buffers['input'] =
+      'no: !index! id: !number0! place !char0! key: !char1!!char1!!char1!\n';
+      expect(
+          butler.execute(
+              'duplicate count=3 Offsets=10,0 Steps=5,1 BaseChar="Ak" meta=! out=list'),
+          isNull);
+      expect(butler.buffers['list'],
+          'no: 0 id: 10 place A key: kkk\nno: 1 id: 15 place B key: lll\nno: 2 id: 20 place C key: mmm\n');
+    });
+    test('%numberX% %charX% value', () {
+      butler.buffers['input'] = 'abc %index% %char0% %number1% %value% 123\n';
+      expect(
+          butler.execute(
+              'duplicate count=2 Offsets=1,2 BaseChars="XX" Steps=1,10 Values=,"one","two"'),
+          isNull);
+      expect(
+          butler.buffers['output'], 'abc 0 X 2 one 123\nabc 1 Y 12 two 123\n');
+    });
+    test('%number% %value%', () {
+      butler.buffers['input'] = 'animal %number%: %value%\n';
+      expect(butler.execute('duplicate count=2 offset=1 Values=,"cat","dog"'),
+          isNull);
+      expect(butler.buffers['output'], 'animal 1: cat\nanimal 2: dog\n');
     });
   });
 }
