@@ -117,7 +117,8 @@ void main() {
         butler.checkParameters(butler.splitParameters(expected), expected);
         expect('missing WordingError', isNull);
       } on WordingError catch (exc) {
-        expect(exc.message, 'parameter "name" is too long (8): [string]: VeryLongName');
+        expect(exc.message,
+            'parameter "name" is too long (8): [string]: VeryLongName');
       }
     });
     test('checkParameters-int-error', () {
@@ -126,7 +127,8 @@ void main() {
         butler.checkParameters(butler.splitParameters(expected), expected);
         expect('missing WordingError', isNull);
       } on WordingError catch (exc) {
-        expect(exc.message, 'parameter "number": non negative number expected, not one');
+        expect(exc.message,
+            'parameter "number": non negative number expected, not one');
       }
     });
     test('checkParameters-stringList-error', () {
@@ -276,8 +278,8 @@ name: Berta
     test('Filters + Templates', () {
       expect(
           butler.execute('filter start=/<person/ end=!</person! '
-              'Filters=";<(name)>(.*?)<;<id>(.*?)<" '
-              'repeat=2 Templates=";%1%: %2%\n;no: %1%\n"'),
+              'Filters=;r/<(name)>(.*?)</;r/<id>(.*?)</ '
+              'repeat=2 Templates=;i~"%1%: %2%~n";i~"no: %1%~n"'),
           isNull);
       expect(butler.buffers['output'], '''no: 1
 name: Adam
@@ -301,7 +303,7 @@ WHERE
 ;
 ''';
       butler.buffers['input'] =
-          '''replace i=sql what=;":from";"'2021-06-01'";":to";"'2021-07-01'";':customer';"1133"
+          '''replace i=sql What=;":from";"'2021-06-01'";":to";"'2021-07-01'";':customer';"1133"
 ''';
       expect(butler.execute('execute'), isNull);
       expect(butler.getBuffer('output'), '''SELECT
@@ -345,7 +347,7 @@ duplicate input=template count=3 offset=1 baseChar=A''';
     final butler = TextButler();
     test('%valuesX%', () {
       butler.buffers['input'] =
-      'animal %value0% named %value1% comes from %value2%.\n';
+          'animal %value0% named %value1% comes from %value2%.\n';
       expect(
           butler.execute(
               'duplicate count=2 ListValues=;,"cat","dog";,"Mia","Harro";,"London","Rome"'),
@@ -365,7 +367,7 @@ duplicate input=template count=3 offset=1 baseChar=A''';
     });
     test('!index! !number0! !char0! !char1!', () {
       butler.buffers['input'] =
-      'no: !index! id: !number0! place !char0! key: !char1!!char1!!char1!\n';
+          'no: !index! id: !number0! place !char0! key: !char1!!char1!!char1!\n';
       expect(
           butler.execute(
               'duplicate count=3 Offsets=10,0 Steps=5,1 BaseChar="Ak" meta=! out=list'),

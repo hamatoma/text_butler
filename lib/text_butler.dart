@@ -137,23 +137,7 @@ class ParameterSet {
     if (!map.containsKey(name)) {
       throw InternalError('ParameterSet.asInt', 'unknown parameter $name');
     }
-    RegExp rc;
-    ParameterValue value = map[name]!;
-    switch (value.stringType) {
-      case StringType.regExp:
-      case StringType.string:
-        rc = RegExp(value.string!);
-        break;
-      case StringType.regExpIgnoreCase:
-        rc = RegExp(value.string!, caseSensitive: false);
-        break;
-      case StringType.stringIgnoreCase:
-        rc = RegExp(RegExp.escape(value.string!), caseSensitive: false);
-        break;
-      default:
-        throw InternalError(
-            'asRegExpr()', 'unexpected string type: ${value.stringType}');
-    }
+    RegExp rc = map[name]!.asRegExp();
     return rc;
   }
 
@@ -211,13 +195,13 @@ class ParameterSet {
     final current = map[name]!;
     switch (info!.type) {
       case ParameterType.natList:
-        rc = current.asIntList().length;
+        rc = current.asNatList().length;
         break;
       case ParameterType.patternList:
         rc = current.asPatternList().length;
         break;
       case ParameterType.stringList:
-        rc = current.asStringList().length;
+        rc = current.asValueList().length;
         break;
       default:
         throw InternalError('countOfList()', 'not a list: $name');
@@ -283,6 +267,8 @@ class ParameterValue {
       this.listOfList,
       this.intList,
       this.natValue});
+
+  /// Returns the "value" as integer.
   int asInt() {
     if (parameterType != ParameterType.nat) {
       throw InternalError(
@@ -291,7 +277,8 @@ class ParameterValue {
     return natValue!;
   }
 
-  List<int> asIntList() {
+  /// Returns the "value" as list of integers
+  List<int> asNatList() {
     if (parameterType != ParameterType.natList) {
       throw InternalError(
           'ParameterValue.asIntList()', 'parameter is $parameterType');
@@ -299,6 +286,7 @@ class ParameterValue {
     return intList!;
   }
 
+  /// Returns the "value" as list of ParameterValue instances.
   List<ParameterValue> asPatternList() {
     if (parameterType != ParameterType.patternList) {
       throw InternalError(
@@ -307,6 +295,41 @@ class ParameterValue {
     return list!;
   }
 
+  /// Returns the "value" as a list of RegExp instances.
+  List<RegExp> asPatterns() {
+    if (parameterType != ParameterType.patternList) {
+      throw InternalError('asPatterns()', 'parameter is $parameterType');
+    }
+    final rc = <RegExp>[];
+    for (var item in list!) {
+      rc.add(item.asRegExp());
+    }
+    return rc;
+  }
+
+  /// Returns the value as RegExp instance.
+  /// @throws InternalError() on error.
+  RegExp asRegExp() {
+    RegExp rc;
+    switch (stringType) {
+      case StringType.regExp:
+      case StringType.string:
+        rc = RegExp(string!);
+        break;
+      case StringType.regExpIgnoreCase:
+        rc = RegExp(string!, caseSensitive: false);
+        break;
+      case StringType.stringIgnoreCase:
+        rc = RegExp(RegExp.escape(string!), caseSensitive: false);
+        break;
+      default:
+        throw InternalError(
+            'asRegExpr()', 'unexpected string type: $stringType');
+    }
+    return rc;
+  }
+
+  /// Returns the "value" as string.
   String asString() {
     if (parameterType != ParameterType.string &&
         parameterType != ParameterType.pattern) {
@@ -316,7 +339,17 @@ class ParameterValue {
     return string!;
   }
 
-  List<ParameterValue> asStringList() {
+  /// Returns the "value" as list of strings.
+  List<String> asStringList() {
+    final rc = <String>[];
+    for (var item in list!) {
+      rc.add(item.string!);
+    }
+    return rc;
+  }
+
+  /// Returns the "value" as list of ParameterValue instances.
+  List<ParameterValue> asValueList() {
     if (parameterType != ParameterType.stringList) {
       throw InternalError(
           'ParameterValue.asStringList()', 'parameter is $parameterType');
@@ -551,15 +584,16 @@ class TextButler {
       case ParameterType.stringList:
         throw InternalError('defaultValue()', 'unexpected type: $type');
       case ParameterType.nat:
-        if (defaultValue == null){
+        if (defaultValue == null) {
           throw InternalError('defaultValue()', 'defaultValue is null');
         }
         final value = int.tryParse(defaultValue);
-        if (value == null){
-          throw InternalError('defaultValue()', 'defaultValue is not a nat: $value');
+        if (value == null) {
+          throw InternalError(
+              'defaultValue()', 'defaultValue is not a nat: $value');
         }
-        rc = ParameterValue(type,
-            stringType: StringType.undef, natValue: value);
+        rc =
+            ParameterValue(type, stringType: StringType.undef, natValue: value);
         break;
       case ParameterType.string:
         rc = ParameterValue(type,
@@ -795,18 +829,13 @@ class TextButler {
     if (current.hasParameter('filter')) {
       filters = [RegExp(current.asString('filter'))];
     } else {
-      filters = <RegExp>[];
-      final patterns = current.asString('Filters');
-      for (var pattern in patterns.substring(1).split(patterns[0])) {
-        filters.add(RegExp(pattern));
-      }
+      filters = current.map['Filters']!.asPatterns();
     }
     List<String>? templates;
     if (current.hasParameter('template')) {
       templates = [current.asString('template')];
     } else if (current.hasParameter('Templates')) {
-      final templates2 = current.asString('Templates');
-      templates = templates2.substring(1).split(templates2[0]);
+      templates = current.map['Templates']!.asStringList();
     }
     final source = getBuffer(current.asString('input')).split('\n');
     final repeat = current.asInt('repeat');
@@ -875,7 +904,7 @@ class TextButler {
     current.checkExactlyOneOf('value', 'with');
     current.checkExactlyOneOf('regexpr', 'what');
     final source = getBuffer(current.asString('input'));
-    var count = 0;
+    int count;
     if (current.hasParameter('regexpr')) {
       count = RegExp(current.asString('regexpr')).allMatches(source).length;
     } else {
