@@ -9,7 +9,7 @@ LABEL="===SEPARATOR-BETWEEN-SCRIPT-AND_TAR==="
 END_LABEL="===END-SCRIPT-AND_TAR==="
 BASE=$(pwd)
 DATE=$(date -u +%Y-%m-%d)
-# flutter build linux
+test "$1" = "all" && flutter build linux
 mkdir -p $(dirname $TARGET)
 test -d $TARGET_DIR && rm -Rf $TARGET_DIR
 mkdir -p $TARGET_DIR

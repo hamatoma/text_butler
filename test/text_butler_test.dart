@@ -288,53 +288,6 @@ name: Berta
 ''');
     });
   });
-  group('TextButler-execute', () {
-    final butler = TextButler();
-    test('sql-replace', () {
-      butler.buffers['sql'] = '''SELECT
-  pp.project_title, pp.project_end,
-  (SELECT sum(workinghour_hours) 
-    FROM workinghours w2 WHERE w2.workinghour_id = ww.workinghour_id) AS hours
-FROM projects pp
-  LEFT JOIN workinghours ww ON ww.project_id=pp.project_id
-WHERE
-  ww.workinghour_start >= :from AND ww.workinghour_start < :to
-  AND pp.project_customerid = :customer
-;
-''';
-      butler.buffers['input'] =
-          '''replace i=sql What=;":from";"'2021-06-01'";":to";"'2021-07-01'";':customer';"1133"
-''';
-      expect(butler.execute('execute'), isNull);
-      expect(butler.getBuffer('output'), '''SELECT
-  pp.project_title, pp.project_end,
-  (SELECT sum(workinghour_hours) 
-    FROM workinghours w2 WHERE w2.workinghour_id = ww.workinghour_id) AS hours
-FROM projects pp
-  LEFT JOIN workinghours ww ON ww.project_id=pp.project_id
-WHERE
-  ww.workinghour_start >= '2021-06-01' AND ww.workinghour_start < '2021-07-01'
-  AND pp.project_customerid = 1133
-;
-''');
-    });
-    test('simple', () {
-      butler.buffers['input'] = '''copy out=script text="Hi "
-copy append out=script text="world"''';
-      expect(butler.execute('execute'), isNull);
-      expect(butler.getBuffer('script'), 'Hi world');
-    });
-    test('from examples', () {
-      butler.buffers['script'] =
-          '''copy text=i~"%index%: Id: id%number% Name: %char%%char%%char%~n" output=template
-duplicate input=template count=3 offset=1 baseChar=A''';
-      expect(butler.execute('execute input=script'), isNull);
-      expect(butler.getBuffer('output'), '''0: Id: id1 Name: AAA
-1: Id: id2 Name: BBB
-2: Id: id3 Name: CCC
-''');
-    });
-  });
   group('TextButler-interpreted text', () {
     final butler = TextButler();
     test('simple', () {
@@ -389,6 +342,53 @@ duplicate input=template count=3 offset=1 baseChar=A''';
       expect(butler.execute('duplicate count=2 offset=1 Values=,"cat","dog"'),
           isNull);
       expect(butler.buffers['output'], 'animal 1: cat\nanimal 2: dog\n');
+    });
+  });
+  group('TextButler-execute', () {
+    final butler = TextButler();
+    test('sql-replace', () {
+      butler.buffers['sql'] = '''SELECT
+  pp.project_title, pp.project_end,
+  (SELECT sum(workinghour_hours) 
+    FROM workinghours w2 WHERE w2.workinghour_id = ww.workinghour_id) AS hours
+FROM projects pp
+  LEFT JOIN workinghours ww ON ww.project_id=pp.project_id
+WHERE
+  ww.workinghour_start >= :from AND ww.workinghour_start < :to
+  AND pp.project_customerid = :customer
+;
+''';
+      butler.buffers['input'] =
+          '''replace i=sql What=;":from";"'2021-06-01'";":to";"'2021-07-01'";':customer';"1133"
+''';
+      expect(butler.execute('execute'), isNull);
+      expect(butler.getBuffer('output'), '''SELECT
+  pp.project_title, pp.project_end,
+  (SELECT sum(workinghour_hours) 
+    FROM workinghours w2 WHERE w2.workinghour_id = ww.workinghour_id) AS hours
+FROM projects pp
+  LEFT JOIN workinghours ww ON ww.project_id=pp.project_id
+WHERE
+  ww.workinghour_start >= '2021-06-01' AND ww.workinghour_start < '2021-07-01'
+  AND pp.project_customerid = 1133
+;
+''');
+    });
+    test('simple', () {
+      butler.buffers['input'] = '''copy out=script text="Hi "
+copy append out=script text="world"''';
+      expect(butler.execute('execute'), isNull);
+      expect(butler.getBuffer('script'), 'Hi world');
+    });
+    test('from examples', () {
+      butler.buffers['script'] =
+          '''copy text=i~"%index%: Id: id%number% Name: %char%%char%%char%~n" output=template
+duplicate input=template count=3 offset=1 baseChar=A''';
+      expect(butler.execute('execute input=script'), isNull);
+      expect(butler.getBuffer('output'), '''0: Id: id1 Name: AAA
+1: Id: id2 Name: BBB
+2: Id: id3 Name: CCC
+''');
     });
   });
 }

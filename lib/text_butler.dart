@@ -91,24 +91,6 @@ class ParameterSet {
   /// The list starts with a separator: free choice of a separator.
   /// Example: parameter 'animals' contains ",cat,dog".
   /// Returns the [index]-th member of the list.
-  String asListMember(String name, int index) {
-    String listAsString = asString(name);
-    bool autoSeparator = expected[name]!.autoSeparator;
-    if (!autoSeparator) {}
-    List<String> list = !autoSeparator
-        ? listAsString.split(',')
-        : listAsString.substring(1).split(listAsString[0]);
-    if (index < 0 || index >= list.length) {
-      throw WordingError(
-          'parameter "$name" contains too few list members: index: $index list: $listAsString');
-    }
-    return list[index];
-  }
-
-  /// Returns a member of a "auto selector list" stored in parameter [name].
-  /// The list starts with a separator: free choice of a separator.
-  /// Example: parameter 'animals' contains ",cat,dog".
-  /// Returns the [index]-th member of the list.
   int asListMemberInt(String name, int index, {int? defaultValue}) {
     int? rc;
     if (!hasParameter(name)) {
@@ -129,6 +111,32 @@ class ParameterSet {
       rc = list[index];
     }
     return rc;
+  }
+
+  /// Returns a member of a "auto selector list" stored in parameter [name].
+  /// The list starts with a separator: free choice of a separator.
+  /// Example: parameter 'animals' contains ",cat,dog".
+  /// Returns the [index]-th member of the list.
+  String asListMemberString(String name, int index) {
+    if (!hasParameter(name)) {
+      throw InternalError('asListMember()', 'unknown parameter "$name"');
+    }
+    String? rc;
+    final parameterValue = map[name]!;
+    switch (parameterValue.parameterType) {
+      case ParameterType.stringList:
+        if (index < 0 || index >= parameterValue.list!.length) {
+          throw WordingError(
+              'parameter "$name" contains too few list members: index: $index list: $parameterValue');
+        }
+        rc = parameterValue.list![index].string;
+        break;
+      // case ParameterType.listOfStringList:
+      default:
+        throw InternalError('asListMemberString()',
+            'unhandled type: ${parameterValue.parameterType}');
+    }
+    return rc!;
   }
 
   /// Returns a RegExp instance.
@@ -240,6 +248,7 @@ class ParameterSet {
 
 enum ParameterType {
   bool,
+  listOfStringList,
 
   /// non negative integer
   nat,
@@ -391,6 +400,16 @@ class ParameterValue {
             (previousValue, element) =>
                 previousValue + ' ' + element.toString());
         break;
+      case ParameterType.listOfStringList:
+        rc = listOfList!.fold(
+            '[listOfStringList]',
+            (previousValue, element) =>
+                previousValue +
+                ' ' +
+                '[' +
+                element.toString().substring(13) +
+                ']');
+        break;
     }
     return rc;
   }
@@ -410,7 +429,7 @@ class TextButler {
     'copy input=input output=output append',
     'copy text="Hello" output=output',
     '',
-    r'count regexpr="\d+" output=count',
+    r'count regexpr=r"\d+" output=count',
     '',
     'duplicate count=2 offset=100 step=10',
     r'#input: index: %index% item: %number% name: %char%\n',
@@ -418,7 +437,7 @@ class TextButler {
     'duplicate count=3 Offsets=10,0 Steps=10,1 BaseChars=Aa meta=%"',
     r'#input: "no: %index% id: %number0% place %char0% class %char1%\n',
     '',
-    'duplicate count=2 offset=1 Values=",cat,dog"',
+    'duplicate count=2 offset=1 Values=,"cat","dog"',
     r'#input: "%number%: %value%\n"',
     '',
     'duplicate count=2 ListValues=";,cat,dog;,Mia,Harro;,London,Rome"',
@@ -427,11 +446,12 @@ class TextButler {
     'execute input=input',
     r'#input: copy text="Hi "\ncopy append text="world',
     ''
-        r'filter start=/^Name: Miller/ end=/^Name:/ filter=/^\s*[^#\s]/',
-    r'filter Filters=%/<(name|id|email>(.*?)</href="(.*?)"% meta=% Templates=",%group2%: %group1%1,link: %group2%"',
+        r'filter start=r/^Name: Miller/ end=r/^Name:/ filter=r/^\s*[^#\s]/',
+    r'filter Filters=;r/<(name|id|email>(.*?)</;r/href="(.*?)"/ meta=% '
+        'Templates=,"%group2%: %group1%1","link: %group2%"',
     '',
-    r'replace regexpr=/ (\d+)/ meta=\ with=": \0"',
-    r'replace what="Hello" value="Hi"',
+    r'replace meta=& What=;r/ (\d+)/;": &0&"',
+    r'replace What=;"Hello";"Hi"',
     '',
     'show what=buffers',
     '',
@@ -459,6 +479,8 @@ class TextButler {
       pattern: RegExp(patternBufferName),
       patternError: 'wrong buffer name: only letters allowed',
       delimited: false);
+  final paramListOfStringList =
+      ParameterInfo(ParameterType.listOfStringList, autoSeparator: true);
   final paramIntDefault1 =
       ParameterInfo(ParameterType.nat, defaultValue: '1', optional: false);
   final paramIntList = ParameterInfo(ParameterType.natList, delimited: false);
@@ -561,6 +583,7 @@ class TextButler {
           case ParameterType.pattern:
           case ParameterType.patternList:
           case ParameterType.stringList:
+          case ParameterType.listOfStringList:
           case ParameterType.natList:
             if (currentValue == null) {
               throw WordingError('missing value of parameter "$name"');
@@ -582,6 +605,7 @@ class TextButler {
       case ParameterType.pattern:
       case ParameterType.patternList:
       case ParameterType.stringList:
+      case ParameterType.listOfStringList:
         throw InternalError('defaultValue()', 'unexpected type: $type');
       case ParameterType.nat:
         if (defaultValue == null) {
@@ -755,7 +779,7 @@ class TextButler {
       'BaseChars': paramBaseChars,
       'count': paramIntNeeded,
       'input': paramBufferName,
-      'ListValues': paramStringListAutoSeparator,
+      'ListValues': paramListOfStringList,
       'offset': paramOffset,
       'Offsets': paramIntList,
       'output': paramBufferName,
@@ -773,6 +797,10 @@ class TextButler {
     final input = getBuffer(current.asString('input'));
     StringBuffer buffer = StringBuffer();
     final count = current.asInt('count');
+    if (current.hasParameter('ListValues')) {
+      throw WordingError(
+          'sorry: evaluation of ListValues is not implemented yet');
+    }
     for (var ix = 0; ix < count; ix++) {
       final part = replacePlaceholders(input, ix, current);
       buffer.write(part);
@@ -901,29 +929,54 @@ class TextButler {
     current.setIfUndefined('input', 'input');
     current.setIfUndefined('output', 'output');
     checkParameters(current, expected);
-    current.checkExactlyOneOf('value', 'with');
-    current.checkExactlyOneOf('regexpr', 'what');
-    final source = getBuffer(current.asString('input'));
-    int count;
-    if (current.hasParameter('regexpr')) {
-      count = RegExp(current.asString('regexpr')).allMatches(source).length;
-    } else {
-      final buffer = StringBuffer();
-      final value = current.asString('value');
-      var start = 0;
-      var lastStart = 0;
-      final pattern = current.asString('what');
-      while ((start = source.indexOf(pattern, start)) >= 0) {
-        if (start > 0) {
-          buffer.write(source.substring(lastStart, start));
-        }
-        buffer.write(value);
-        start = lastStart = start + pattern.length;
-      }
-      buffer.write(source.substring(lastStart));
-      final target = current.asString('output');
-      buffers[target] = buffer.toString();
+    var content = getBuffer(current.asString('input'));
+    if (!current.hasParameter('What')) {
+      throw WordingError('missing parameter "What"');
     }
+    final parameterValue = current.map['What']!;
+    int maxIx = parameterValue.list!.length - 1;
+    for (var ix = 0; ix <= maxIx; ix += 2) {
+      final pattern = parameterValue.list![ix];
+      if (ix >= maxIx) {
+        throw WordingError('parameter "What" has not an even count of entries');
+      }
+      var replacement = parameterValue.list![ix + 1];
+      if (replacement.stringType != StringType.string) {
+        throw WordingError('parameter "What": replacement at index ${ix + 1} '
+            'is not a string: ${StringType.string} [$replacement]');
+      }
+      var replacement2 = replacement.string;
+      switch (pattern.stringType) {
+        case StringType.undef:
+          throw InternalError('executeReplace()', 'wrong undef: $pattern');
+        case StringType.regExp:
+        case StringType.regExpIgnoreCase:
+        case StringType.stringIgnoreCase:
+          final buffer = StringBuffer();
+          var lastStart = 0;
+          final pattern2 = pattern.asRegExp();
+          for (var match in pattern2.allMatches(content)) {
+            if (match.start > 0) {
+              buffer.write(content.substring(lastStart, match.start));
+            }
+            final replacement3 = replaceGroups(match, replacement2!);
+            buffer.write(replacement3);
+            lastStart = match.end;
+          }
+          buffer.write(content.substring(lastStart));
+          content = buffer.toString();
+          break;
+        case StringType.string:
+          final meta = current.asString('meta');
+          replacement2 =
+              replacement2!.replaceAll('${meta}group0$meta', replacement2);
+          replacement2 = replacement2.replaceAll('${meta}0$meta', replacement2);
+          content = content.replaceAll(pattern.string!, replacement2);
+          break;
+      }
+    }
+    final target = current.asString('output');
+    buffers[target] = content;
   }
 
   /// Implements the command "replace" specified by some [parameters].
@@ -1081,6 +1134,25 @@ class TextButler {
     map[name] = parameterValue;
   }
 
+  /// Parses a list of string lists into a ParameterValue instance.
+  /// [name] is the name of the parameter to parse.
+  /// [isPattern]: true: patterns are allowed. false: only strings are allowed.
+  /// The ParameterValue instance is stored in [map].
+  void parseListOfStringList(String name, MapParameter map) {
+    String separator =
+        unshiftChar('parameter "$name": separator', regExprAutoSeparator);
+    final list = <ParameterValue>[];
+    var again = true;
+    while (again) {
+      list.add(parseStringList(name, null));
+      again = stringParameters.startsWith(separator);
+      if (again) {
+        stringParameters = stringParameters.substring(1);
+      }
+    }
+    map[name] = ParameterValue(ParameterType.listOfStringList, list: list);
+  }
+
   /// Parses a string or a pattern into a ParameterValue instance.
   /// [name] is the name of the parameter to parse.
   /// The ParameterValue instance is stored in [map] (if not null).
@@ -1130,8 +1202,8 @@ class TextButler {
   /// Parses a pattern list into a ParameterValue instance.
   /// [name] is the name of the parameter to parse.
   /// [isPattern]: true: patterns are allowed. false: only strings are allowed.
-  /// The ParameterValue instance is stored in [map].
-  void parseStringList(String name, MapParameter map,
+  /// The ParameterValue instance is stored in [map] (if not null).
+  ParameterValue parseStringList(String name, MapParameter? map,
       {bool isPattern = false}) {
     String separator =
         unshiftChar('parameter "$name": separator', regExprAutoSeparator);
@@ -1144,9 +1216,13 @@ class TextButler {
         stringParameters = stringParameters.substring(1);
       }
     }
-    map[name] = ParameterValue(
+    final rc = ParameterValue(
         isPattern ? ParameterType.patternList : ParameterType.stringList,
         list: list);
+    if (map != null) {
+      map[name] = rc;
+    }
+    return rc;
   }
 
   /// Replaces the templates in the 'filter' command.
@@ -1205,7 +1281,7 @@ class TextButler {
           replacement = (offset + index * step).toString();
           break;
         case 'value':
-          replacement = parameters.asListMember('Values', index);
+          replacement = parameters.asListMemberString('Values', index);
           break;
         case 'value0':
         case 'value1':
@@ -1218,7 +1294,7 @@ class TextButler {
         case 'value8':
         case 'value9':
           final index2 = placeholder.codeUnits[5] - '0'.codeUnits[0];
-          final items = parameters.asListMember('ListValues', index2);
+          final items = parameters.asListMemberString('ListValues', index2);
           if (items.length < 2) {
             throw WordingError(
                 '"ListValues": entry $index2 is too short: $items');
@@ -1357,6 +1433,9 @@ class TextButler {
             break;
           case ParameterType.stringList:
             parseStringList(name, map, isPattern: false);
+            break;
+          case ParameterType.listOfStringList:
+            parseListOfStringList(name, map);
             break;
         }
         stringParameters = stringParameters.trimLeft();

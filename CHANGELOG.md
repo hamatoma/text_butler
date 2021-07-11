@@ -1,3 +1,17 @@
+## [0.3.1] - 2021.07.11
+
+complete refactoring: new syntax for strings/patterns:
+* prefix "r" defines a regular expression
+* prefix "R" defines a regular expression, case insensitive
+* prefix "I" defines a case insensitive string
+
+This changes reduce the complexity of other syntax constructs and multiply the possibilities
+
+syntax of string lists is now: <separator><prefix1><delimiter1><string1><delimiter1<separator>...
+
+* previous syntax: Values=";a;b;c"
+* new syntax: Values=;"a";/b/;'c'
+
 ## [0.2.1] - 2021.06.26
 
 buffer macro in interpreted string, fix: command "load"
