@@ -101,7 +101,7 @@ class ParameterSet {
       }
     }
     if (rc == null) {
-      final list = map[name]!.intList;
+      final list = map[name]!.natList;
       if (list == null) {
         throw InternalError('asListMemberInt', 'not an intList: $name');
       }
@@ -109,6 +109,32 @@ class ParameterSet {
         throw WordingError('wrong index $index in "$name');
       }
       rc = list[index];
+    }
+    return rc;
+  }
+
+  /// Returns a member of a "list of string lists" stored in parameter [name]
+  /// at [index].
+  /// Returns the [index]-th member of the list as list of strings.
+  List<String> asListMemberList(String name, int index) {
+    if (!hasParameter(name)) {
+      throw InternalError('asListMember()', 'unknown parameter "$name"');
+    }
+    List<String> rc;
+    final parameterValue = map[name]!;
+    switch (parameterValue.parameterType) {
+      case ParameterType.listOfStringList:
+        if (index < 0 || index >= parameterValue.list!.length) {
+          throw WordingError(
+              'parameter "$name" contains too few list members: index: $index list: $parameterValue');
+        }
+        final list = parameterValue.list![index].list!;
+        rc = list.map((value) => value.string!).toList();
+        break;
+      // case ParameterType.listOfStringList:
+      default:
+        throw InternalError('asListMemberString()',
+            'unhandled type: ${parameterValue.parameterType}');
     }
     return rc;
   }
@@ -266,15 +292,13 @@ class ParameterValue {
   final StringType stringType;
   String? string;
   final List<ParameterValue>? list;
-  final List<List<ParameterValue>>? listOfList;
-  final List<int>? intList;
+  final List<int>? natList;
   int? natValue;
   ParameterValue(this.parameterType,
       {this.stringType = StringType.undef,
       this.string,
       this.list,
-      this.listOfList,
-      this.intList,
+      this.natList,
       this.natValue});
 
   /// Returns the "value" as integer.
@@ -292,7 +316,7 @@ class ParameterValue {
       throw InternalError(
           'ParameterValue.asIntList()', 'parameter is $parameterType');
     }
-    return intList!;
+    return natList!;
   }
 
   /// Returns the "value" as list of ParameterValue instances.
@@ -377,7 +401,7 @@ class ParameterValue {
         rc = '[nat]: $int';
         break;
       case ParameterType.natList:
-        rc = intList!.fold(
+        rc = natList!.fold(
             '[natList]',
             (previousValue, element) =>
                 previousValue + ' ' + element.toString());
@@ -386,7 +410,7 @@ class ParameterValue {
         rc = '[pattern]: $string';
         break;
       case ParameterType.patternList:
-        rc = intList!.fold(
+        rc = natList!.fold(
             '[patternList]',
             (previousValue, element) =>
                 previousValue + ' ' + element.toString());
@@ -395,13 +419,13 @@ class ParameterValue {
         rc = '[string]: $string';
         break;
       case ParameterType.stringList:
-        rc = intList!.fold(
+        rc = natList!.fold(
             '[stringList]',
             (previousValue, element) =>
                 previousValue + ' ' + element.toString());
         break;
       case ParameterType.listOfStringList:
-        rc = listOfList!.fold(
+        rc = list!.fold(
             '[listOfStringList]',
             (previousValue, element) =>
                 previousValue +
@@ -486,7 +510,11 @@ class TextButler {
   final paramIntList = ParameterInfo(ParameterType.natList, delimited: false);
   final paramIntNeeded = ParameterInfo(ParameterType.nat, optional: false);
   final paramMarker = ParameterInfo(ParameterType.string,
-      defaultValue: '#', minLength: 1, optional: false);
+      defaultValue: '#',
+      minLength: 1,
+      maxLength: 1,
+      delimited: false,
+      optional: false);
   final paramMeta = ParameterInfo(ParameterType.string,
       defaultValue: '%',
       optional: false,
@@ -745,7 +773,6 @@ class TextButler {
     // r'count regexpr="\d+" output=count',
     final expected = {
       'append': paramBool,
-      'ignore': paramBool,
       'input': paramBufferName,
       'output': paramBufferName,
       'marker': paramMarker,
@@ -797,10 +824,10 @@ class TextButler {
     final input = getBuffer(current.asString('input'));
     StringBuffer buffer = StringBuffer();
     final count = current.asInt('count');
-    if (current.hasParameter('ListValues')) {
-      throw WordingError(
-          'sorry: evaluation of ListValues is not implemented yet');
-    }
+    // if (current.hasParameter('ListValues')) {
+    //   throw WordingError(
+    //       'sorry: evaluation of ListValues is not implemented yet');
+    // }
     for (var ix = 0; ix < count; ix++) {
       final part = replacePlaceholders(input, ix, current);
       buffer.write(part);
@@ -1130,7 +1157,7 @@ class TextButler {
       }
       list.add(intValue);
     }
-    final parameterValue = ParameterValue(ParameterType.natList, intList: list);
+    final parameterValue = ParameterValue(ParameterType.natList, natList: list);
     map[name] = parameterValue;
   }
 
@@ -1294,17 +1321,12 @@ class TextButler {
         case 'value8':
         case 'value9':
           final index2 = placeholder.codeUnits[5] - '0'.codeUnits[0];
-          final items = parameters.asListMemberString('ListValues', index2);
-          if (items.length < 2) {
+          final items = parameters.asListMemberList('ListValues', index2);
+          if (items.length < index) {
             throw WordingError(
-                '"ListValues": entry $index2 is too short: $items');
+                '"ListValues": entry $index is too short: $items');
           }
-          final list = items.substring(1).split(items[0]);
-          if (index >= list.length) {
-            throw WordingError(
-                '"ListValues": entry $index2 has too few items ($index): $items (${items.length})');
-          }
-          replacement = list[index];
+          replacement = items[index];
           break;
         case 'char':
           replacement = String.fromCharCode(

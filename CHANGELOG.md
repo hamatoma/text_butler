@@ -1,3 +1,8 @@
+## [0.3.2] - 2021.07.12
+
+Refactoring finished.
+* All tests run successfully
+
 ## [0.3.1] - 2021.07.11
 
 complete refactoring: new syntax for strings/patterns:
