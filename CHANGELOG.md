@@ -1,3 +1,9 @@
+## [0.3.3] - 2021.07.13
+
+more tests
+* each command is tested with all its parameters
+* fix: replaceGroups() uses the parameter meta now
+
 ## [0.3.2] - 2021.07.12
 
 Refactoring finished.

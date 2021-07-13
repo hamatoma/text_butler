@@ -235,6 +235,7 @@ class ParameterSet {
         rc = current.asPatternList().length;
         break;
       case ParameterType.stringList:
+      case ParameterType.listOfStringList:
         rc = current.asValueList().length;
         break;
       default:
@@ -383,7 +384,8 @@ class ParameterValue {
 
   /// Returns the "value" as list of ParameterValue instances.
   List<ParameterValue> asValueList() {
-    if (parameterType != ParameterType.stringList) {
+    if (parameterType != ParameterType.stringList &&
+        parameterType != ParameterType.listOfStringList) {
       throw InternalError(
           'ParameterValue.asStringList()', 'parameter is $parameterType');
     }
@@ -458,7 +460,7 @@ class TextButler {
     'duplicate count=2 offset=100 step=10',
     r'#input: index: %index% item: %number% name: %char%\n',
     '',
-    'duplicate count=3 Offsets=10,0 Steps=10,1 BaseChars=Aa meta=%"',
+    'duplicate count=3 Offsets=10,0 Steps=10,1 BaseChars="Aa" meta=%"',
     r'#input: "no: %index% id: %number0% place %char0% class %char1%\n',
     '',
     'duplicate count=2 offset=1 Values=,"cat","dog"',
@@ -537,8 +539,6 @@ class TextButler {
   // can be done in other methods.
   final paramStringMinLength1 =
       ParameterInfo(ParameterType.string, minLength: 1);
-
-  var groupPattern = RegExp(r'%(\w+)%');
 
   String stringParameters = '';
 
@@ -922,7 +922,8 @@ class TextButler {
             buffer.write(source[ixHit!]);
             buffer.write('\n');
           } else {
-            buffer.write(replaceGroups(hit.hit!, templates[hit.index!]));
+            buffer.write(replaceGroups(
+                hit.hit!, templates[hit.index!], current.asString('meta')));
           }
           start = ixHit! + 1;
         }
@@ -930,10 +931,13 @@ class TextButler {
       if (hasStart) {
         start = search(source, [RegExp(current.asString('start'))], hit,
             from: end + 1);
+        if (start == null) {
+          break;
+        }
       }
       if (current.hasParameter('end')) {
         end = search(source, [RegExp(current.asString('start'))], hit,
-                from: (start ?? 0) + 1) ??
+                from: start + 1) ??
             source.length - 1;
       }
     }
@@ -986,7 +990,8 @@ class TextButler {
             if (match.start > 0) {
               buffer.write(content.substring(lastStart, match.start));
             }
-            final replacement3 = replaceGroups(match, replacement2!);
+            final replacement3 =
+                replaceGroups(match, replacement2!, current.asString('meta'));
             buffer.write(replacement3);
             lastStart = match.end;
           }
@@ -1002,8 +1007,7 @@ class TextButler {
           break;
       }
     }
-    final target = current.asString('output');
-    buffers[target] = content;
+    store(current, content);
   }
 
   /// Implements the command "replace" specified by some [parameters].
@@ -1253,8 +1257,9 @@ class TextButler {
   }
 
   /// Replaces the templates in the 'filter' command.
-  String replaceGroups(RegExpMatch filterMatch, String template) {
+  String replaceGroups(RegExpMatch filterMatch, String template, String meta) {
     String rc = template;
+    var groupPattern = RegExp('$meta(\\w+)$meta');
     final matches = groupPattern.allMatches(template);
     for (var match in matches) {
       final macro = match.group(0)!;

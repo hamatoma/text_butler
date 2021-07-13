@@ -284,13 +284,72 @@ e33
       expect(butler.buffers['output'], 'animal 1: cat\nanimal 2: dog\n');
     });
     test('max. parameters one current value', () {
-      butler.buffers['src'] = '&index&: &number&: &value&\n';
+      butler.buffers['src'] = '&index&: &number&: &value& &char&\n';
       butler.buffers['trg'] = '===\n';
       expect(
           butler.execute('duplicate app baseChar=X count=2 i=src m=& ou=trg '
               'offset=3 Values=,"cat","dog" step=2'),
           isNull);
-      expect(butler.buffers['trg'], '===\n0: 3: cat\n1: 5: dog\n');
+      expect(butler.buffers['trg'], '===\n0: 3: cat X\n1: 5: dog Y\n');
+    });
+    test('max. parameters two current values', () {
+      butler.buffers['src'] = '+index+: +number0+&+number1+: '
+          '+value0+/+value1+ +char0+ +char1+\n';
+      butler.buffers['trg'] = '===\n';
+      expect(
+          butler.execute(
+              'duplicate app BaseChars="wF" count=2 i=src m=+ ou=trg '
+              'Offsets=20,10 ListValues=;,"cat","dog";,"Mia","Wuff" Steps=2,4'),
+          isNull);
+      expect(butler.buffers['trg'],
+          '===\n0: 20&10: cat/Mia w F\n1: 22&14: dog/Wuff x G\n');
+    });
+  });
+  group('TextButler-execute', () {
+    final butler = TextButler();
+    test('sql-replace', () {
+      butler.buffers['sql'] = '''SELECT
+  pp.project_title, pp.project_end,
+  (SELECT sum(workinghour_hours) 
+    FROM workinghours w2 WHERE w2.workinghour_id = ww.workinghour_id) AS hours
+FROM projects pp
+  LEFT JOIN workinghours ww ON ww.project_id=pp.project_id
+WHERE
+  ww.workinghour_start >= :from AND ww.workinghour_start < :to
+  AND pp.project_customerid = :customer
+;
+''';
+      butler.buffers['input'] =
+          '''replace i=sql What=;":from";"'2021-06-01'";":to";"'2021-07-01'";':customer';"1133"
+''';
+      expect(butler.execute('execute'), isNull);
+      expect(butler.getBuffer('output'), '''SELECT
+  pp.project_title, pp.project_end,
+  (SELECT sum(workinghour_hours) 
+    FROM workinghours w2 WHERE w2.workinghour_id = ww.workinghour_id) AS hours
+FROM projects pp
+  LEFT JOIN workinghours ww ON ww.project_id=pp.project_id
+WHERE
+  ww.workinghour_start >= '2021-06-01' AND ww.workinghour_start < '2021-07-01'
+  AND pp.project_customerid = 1133
+;
+''');
+    });
+    test('simple', () {
+      butler.buffers['input'] = '''copy out=script text="Hi "
+copy append out=script text="world"''';
+      expect(butler.execute('execute'), isNull);
+      expect(butler.getBuffer('script'), 'Hi world');
+    });
+    test('from examples', () {
+      butler.buffers['script'] =
+          '''copy text=i~"%index%: Id: id%number% Name: %char%%char%%char%~n" output=template
+duplicate input=template count=3 offset=1 baseChar=A''';
+      expect(butler.execute('execute input=script'), isNull);
+      expect(butler.getBuffer('output'), '''0: Id: id1 Name: AAA
+1: Id: id2 Name: BBB
+2: Id: id3 Name: CCC
+''');
     });
   });
   group('TextButler-filter', () {
@@ -365,6 +424,33 @@ no: 2
 name: Berta
 ''');
     });
+    test('max. parameters with filter', () {
+      butler.buffers['src'] = '''line1
+Start:
+count: 34
+id: 88
+End:
+''';
+      butler.buffers['trg'] = '<<<\n';
+      expect(
+          butler.execute(r'filter app s=R/^st/ e=R!^end! f=r/(\w+): (\d+)/ '
+              r'i=src m=& o=trg r=2 template="* &1&/&group2&"'),
+          isNull);
+      expect(butler.buffers['trg'], '<<<\n* count/34* id/88');
+    });
+  });
+  group('TextButler-replace', () {
+    final butler = TextButler();
+    test('all parameters', () {
+      butler.buffers['src'] = 'entry1 in line1\nentry2 in line2';
+      butler.buffers['trg'] = '###\n';
+      expect(
+          butler.execute('replace a i=src o=trg m=& '
+              r'What=;I"l";"L";R/([a-z]+)(\d+)/;"&1&=&group2&"'),
+          isNull);
+      expect(
+          butler.getBuffer('trg'), '###\nentry=1 in Line=1\nentry=2 in Line=2');
+    });
   });
   group('TextButler-interpreted text', () {
     final butler = TextButler();
@@ -372,53 +458,6 @@ name: Berta
       butler.buffers['name'] = 'Joe';
       expect(butler.execute('copy text=i~"Hi ~[name]!"'), isNull);
       expect(butler.getBuffer('output'), 'Hi Joe!');
-    });
-  });
-  group('TextButler-execute', () {
-    final butler = TextButler();
-    test('sql-replace', () {
-      butler.buffers['sql'] = '''SELECT
-  pp.project_title, pp.project_end,
-  (SELECT sum(workinghour_hours) 
-    FROM workinghours w2 WHERE w2.workinghour_id = ww.workinghour_id) AS hours
-FROM projects pp
-  LEFT JOIN workinghours ww ON ww.project_id=pp.project_id
-WHERE
-  ww.workinghour_start >= :from AND ww.workinghour_start < :to
-  AND pp.project_customerid = :customer
-;
-''';
-      butler.buffers['input'] =
-          '''replace i=sql What=;":from";"'2021-06-01'";":to";"'2021-07-01'";':customer';"1133"
-''';
-      expect(butler.execute('execute'), isNull);
-      expect(butler.getBuffer('output'), '''SELECT
-  pp.project_title, pp.project_end,
-  (SELECT sum(workinghour_hours) 
-    FROM workinghours w2 WHERE w2.workinghour_id = ww.workinghour_id) AS hours
-FROM projects pp
-  LEFT JOIN workinghours ww ON ww.project_id=pp.project_id
-WHERE
-  ww.workinghour_start >= '2021-06-01' AND ww.workinghour_start < '2021-07-01'
-  AND pp.project_customerid = 1133
-;
-''');
-    });
-    test('simple', () {
-      butler.buffers['input'] = '''copy out=script text="Hi "
-copy append out=script text="world"''';
-      expect(butler.execute('execute'), isNull);
-      expect(butler.getBuffer('script'), 'Hi world');
-    });
-    test('from examples', () {
-      butler.buffers['script'] =
-          '''copy text=i~"%index%: Id: id%number% Name: %char%%char%%char%~n" output=template
-duplicate input=template count=3 offset=1 baseChar=A''';
-      expect(butler.execute('execute input=script'), isNull);
-      expect(butler.getBuffer('output'), '''0: Id: id1 Name: AAA
-1: Id: id2 Name: BBB
-2: Id: id3 Name: CCC
-''');
     });
   });
 }
