@@ -51,3 +51,4 @@ pubspec.lock
 web/
 .metadata
 /Prepare
+coverage/

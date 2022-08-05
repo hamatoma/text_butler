@@ -1,6 +1,20 @@
 import 'package:test/test.dart';
 import 'package:text_butler/text_butler.dart';
 
+class TestLogger extends Logger {
+  @override
+  bool log(String message) {
+    print('+++ $message');
+    return true;
+  }
+
+  @override
+  void clear() {
+    // do nothing
+  }
+}
+
+final logger = TestLogger();
 void main() {
   group('ParameterSet', () {
     final butler = TextButler();
@@ -87,7 +101,7 @@ void main() {
         butler.expandCommand('s');
         expect('missing WordingError', isNull);
       } on WordingError catch (exc) {
-        expect(exc.message, 'ambiguous command "s": show/swap');
+        expect(exc.message, 'ambiguous command "s": show/sort/swap');
       }
     });
     test('checkParameters-success', () {
@@ -160,7 +174,7 @@ void main() {
     test('show', () {
       expect(butler.execute('show'), isNull);
       expect(butler.buffers['output'],
-          'Numbers\nanimals\nexamples\nhistory\ninput\njonny\noutput');
+          'Numbers\nanimals\nexamples\nhistory\ninput\njonny\nlog\noutput');
     });
     test('swap', () {
       expect(butler.execute('swap a=animals b=Numbers'), isNull);
@@ -458,6 +472,105 @@ End:
       butler.buffers['name'] = 'Joe';
       expect(butler.execute('copy text=i~"Hi ~[name]!"'), isNull);
       expect(butler.getBuffer('output'), 'Hi Joe!');
+    });
+  });
+  group('SortInfo', () {
+    test('char-one-range', () {
+      final info = SortInfo(logger, 'c', [SortRange(1, 2, false)]);
+      expect(info.sort('B12\nA3\nC222'.split('\n')), 'B12\nC222\nA3');
+    });
+    test('char-one-range-numeric', () {
+      final info = SortInfo(logger, 'c', [SortRange(1, 2, true)]);
+      expect(info.sort('B12\nA3\nC222'.split('\n')), 'A3\nB12\nC222');
+    });
+    test('word-3-ranges', () {
+      final lines = 'x 12 xyz\na 12 abc\nb 13 abc'.split('\n');
+      var info = SortInfo(logger, 'w', [
+        SortRange(0, 0, false),
+        SortRange(1, 1, false),
+        SortRange(2, 2, false)
+      ]);
+      expect(info.sort(lines), 'a 12 abc\nb 13 abc\nx 12 xyz');
+      info = SortInfo(logger, 'w', [
+        SortRange(1, 1, false),
+        SortRange(0, 0, false),
+        SortRange(2, 2, false)
+      ]);
+      expect(info.sort(lines), 'a 12 abc\nx 12 xyz\nb 13 abc');
+      info = SortInfo(logger, 'w', [
+        SortRange(2, 2, false),
+        SortRange(0, 0, false),
+        SortRange(1, 1, false)
+      ]);
+      expect(info.sort(lines), 'a 12 abc\nb 13 abc\nx 12 xyz');
+    });
+    test('word-3-ranges-numeric', () {
+      final lines = '12 3.2 777\n111 3.20 80.20\n999 2 80.2'.split('\n');
+      var info = SortInfo(logger, 'w', [
+        SortRange(0, 0, true),
+        SortRange(1, 1, true),
+        SortRange(2, 2, true)
+      ]);
+      expect(info.sort(lines), '12 3.2 777\n111 3.20 80.20\n999 2 80.2');
+      info = SortInfo(logger, 'w', [
+        SortRange(1, 1, true),
+        SortRange(0, 0, true),
+        SortRange(2, 2, true)
+      ]);
+      expect(info.sort(lines), '999 2 80.2\n12 3.2 777\n111 3.20 80.20');
+      info = SortInfo(logger, 'w', [
+        SortRange(2, 2, true),
+        SortRange(0, 0, true),
+        SortRange(1, 1, true)
+      ]);
+      expect(info.sort(lines), '111 3.20 80.20\n999 2 80.2\n12 3.2 777');
+    });
+    test('regexp-2-ranges-mixed-alnum-num', () {
+      final lines =
+          'name: joe *id: 12\n*name: bob id: 8\nname: charly id: 1'.split('\n');
+      final regExp = RegExp(r'name: (\S+).*id: (\d+)');
+      var info;
+      info = SortInfo(
+          logger, 'r', [SortRange(1, 1, true), SortRange(0, 0, false)],
+          regExpRelevant: regExp);
+      expect(info.sort(lines),
+          'name: charly id: 1\n*name: bob id: 8\nname: joe *id: 12');
+      info = SortInfo(
+          logger, 'r', [SortRange(0, 0, false), SortRange(1, 1, true)],
+          regExpRelevant: regExp);
+      expect(info.sort(lines),
+          '*name: bob id: 8\nname: charly id: 1\nname: joe *id: 12');
+    });
+    test('word-separator', () {
+      final lines = 'Charly,22\nBob,222\nAda,20'.split('\n');
+      final separator = RegExp(r',');
+      var info;
+      info = SortInfo(
+          logger, 'w', [SortRange(0, 0, false), SortRange(1, 1, true)],
+          separator: separator);
+      expect(info.sort(lines), 'Ada,20\nBob,222\nCharly,22');
+      info = SortInfo(
+          logger, 'w', [SortRange(1, 1, true), SortRange(0, 0, false)],
+          separator: separator);
+      expect(info.sort(lines), 'Ada,20\nCharly,22\nBob,222');
+    });
+  });
+  group('TextButler-sort', () {
+    final butler = TextButler();
+    test('simple', () {
+      butler.buffers['input'] = 'd\nc\na\nb';
+      expect(butler.execute('sort'), isNull);
+      expect(butler.getBuffer('output'), 'a\nb\nc\nd');
+    });
+    test('simple-numeric', () {
+      butler.buffers['input'] = '10\n3\n2\n4\n1';
+      expect(butler.execute('sort how="cn"'), isNull);
+      expect(butler.getBuffer('output'), '1\n2\n3\n4\n10');
+    });
+    test('word-two-ranges-numeric-and-alnum', () {
+      butler.buffers['input'] = '10,joe,adm\n3,bob,adm\n2,charly,usr';
+      expect(butler.execute(r'sort how="wn1,2-3" sep=r/\s*,\s*/'), isNull);
+      expect(butler.getBuffer('output'), '2,charly,usr\n3,bob,adm\n10,joe,adm');
     });
   });
 }
