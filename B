@@ -2,5 +2,9 @@
 ./Prepare
 flutter build linux
 flutter build web
-mkdir -p website
-rsync -a --delete build/web/ website
+cd build/web/
+cp -a ../../tools/InstallWebsite.sh .
+tar czf ../../tools/website.tgz .
+cd ../..
+ls -ld tools/website.tgz
+

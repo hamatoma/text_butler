@@ -1,0 +1,33 @@
+=== Parameters ===
+{| class="wikitable"
+! Name
+! Type
+! Description
+! Example
+|-
+| '''append'''
+| [[English-Documentation#parametertypes|bool]]
+| The file content is appended in the destination buffer
+| append
+|-
+| '''file'''
+| [[English-Documentation#parametertypes|string]]
+| File from which the content is taken.
+| file="addresses.txt"
+|-
+| '''output'''
+| [[English-Documentation#parametertypes|bufferName]]
+| The file content is stored in this buffer. Default: input
+| output=result
+|}
+
+=== Example ===
+The "data.txt" file says:
+<pre>Hello world
+</pre>
+Command:
+<pre>load file="data.txt"
+</pre>
+After that, in "input"
+<pre>Hello world
+</pre>

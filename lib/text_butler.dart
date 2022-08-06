@@ -53,6 +53,8 @@ class ParameterInfo {
   /// Only meaningful for stringList.
   final bool autoSeparator;
 
+  final List<String>? keywords;
+
   ParameterInfo(this.type,
       {this.defaultValue,
       this.delimited = true,
@@ -61,7 +63,8 @@ class ParameterInfo {
       this.maxLength = 1024,
       this.pattern,
       this.autoSeparator = false,
-      this.patternError}) {
+      this.patternError,
+      this.keywords}) {
     if (type == ParameterType.nat || type == ParameterType.natList) {
       delimited = false;
     }
@@ -178,7 +181,16 @@ class ParameterSet {
     if (!map.containsKey(name)) {
       throw InternalError('ParameterSet.asInt', 'unknown parameter $name');
     }
-    RegExp rc = map[name]!.asRegExp();
+    final RegExp rc = map[name]!.asRegExp();
+    return rc;
+  }
+
+  String asKeyword(String name) {
+    if (!map.containsKey(name)) {
+      throw InternalError(
+          'ParameterSet.asKeyword()', 'unknown parameter $name');
+    }
+    final rc = map[name]!.asString();
     return rc;
   }
 
@@ -283,6 +295,7 @@ class ParameterSet {
 enum ParameterType {
   bool,
   listOfStringList,
+  keyword,
 
   /// non negative integer
   nat,
@@ -434,6 +447,9 @@ class ParameterValue {
             (previousValue, element) =>
                 '$previousValue [${element.toString().substring(13)}]');
         break;
+      case ParameterType.keyword:
+        rc = '[keyword]: $string';
+        break;
     }
     return rc;
   }
@@ -442,21 +458,113 @@ class ParameterValue {
 /// Stores the sort parameters.
 class SortInfo {
   static final defaultRangeList = [SortRange(0, 0xffffffff, false)];
-  static final defaultItem = SortItem(false, stringValues: ['']);
+  String defaultSortStringValue = '';
+  double defaultSortFloatValue = 0.0;
   final String mode;
   final RegExp? separator;
-  final RegExp? regExpRelevant;
+  final RegExp? filter;
+  final List<RegExp>? filters;
   final List<SortRange>? ranges;
   var sortItems = <SortLineInfo>[];
   final Logger logger;
 
   SortInfo(this.logger, this.mode, this.ranges,
-      {this.separator, this.regExpRelevant});
+      {this.separator, this.filter, this.filters});
+
+  /// Handles the "sort value" of a regular expression filter.
+  /// Returns a list of [:SortItem:] instances representing the sort "value"
+  /// of given [:line:].
+  /// [:lineNo:] the line number [1..N], used for error messages.
+  List<SortItem> buildFilterItems(String line, int lineNo) {
+    final rc = <SortItem>[];
+    final matcher = filter?.firstMatch(line);
+    if (matcher == null) {
+      logger.log('unmatched line $lineNo: $line');
+      _addDefault(ranges == null ? false : ranges![0].numeric, rc);
+    } else {
+      if (ranges == null) {
+        rc.add(SortItem(false, stringValues: [defaultSortStringValue]));
+      } else {
+        final words = <String>[];
+        for (var ix = 1; ix <= matcher.groupCount; ix++) {
+          words.add(matcher.group(ix) ?? '');
+        }
+        final count = words.length;
+        for (var range in ranges ?? defaultRangeList) {
+          if (range.from < count) {
+            final last = min(count - 1, range.to);
+            final items = words.sublist(range.from, last + 1);
+            if (range.numeric) {
+              final items2 = <double>[];
+              var rangeNo = 0;
+              for (var value in items) {
+                var value2 = double.tryParse(value);
+                if (value2 == null) {
+                  logger.log(
+                      'line $lineNo: word "$value" in range $rangeNo is not a number');
+                  value2 = 0.0;
+                }
+                items2.add(value2);
+              }
+              rc.add(SortItem(true, floatValues: items2));
+            } else {
+              rc.add(SortItem(false, stringValues: items));
+            }
+          }
+        }
+      }
+    }
+    return rc;
+  }
+
+  /// Adds a [:SortItem:] instance to [:rc:] with a sort value used for not
+  /// matching parts.
+  void _addDefault(bool isNumeric, List<SortItem> items) {
+    if (isNumeric) {
+      items.add(SortItem(true, floatValues: [defaultSortFloatValue]));
+    } else {
+      items.add(SortItem(false, stringValues: [defaultSortStringValue]));
+    }
+  }
+
+  /// Handles the "sort value" of a regular expression filter list.
+  /// Returns a list of [:SortItem:] instances representing the sort "value"
+  /// of given [:line:].
+  /// [:lineNo:] the line number [1..N], used for error messages.
+  List<SortItem> buildFiltersItems(String line, int lineNo) {
+    final rc = <SortItem>[];
+    var ranges2 =
+        ranges ?? filters!.map((x) => SortRange(1, 1, false)).toList();
+    var ixFilter = -1;
+    for (var filter in filters!) {
+      ixFilter++;
+      final matcher = filter.firstMatch(line);
+      final numeric =
+          ixFilter < ranges2.length ? ranges2[ixFilter].numeric : false;
+      if (matcher == null) {
+        logger.log('unmatched regex #${ixFilter + 1} in line #$lineNo: $line');
+        _addDefault(numeric, rc);
+      } else {
+        final word = matcher.groupCount < ranges2.length &&
+                ranges2[ixFilter].from <= matcher.groupCount
+            ? matcher.group(ranges2[ixFilter].from)
+            : '';
+        if (numeric) {
+          final value = double.tryParse(word!);
+          final items = [value ?? defaultSortFloatValue];
+          rc.add(SortItem(true, floatValues: items));
+        } else {
+          rc.add(SortItem(false, stringValues: [word!]));
+        }
+      }
+    }
+    return rc;
+  }
 
   /// Builds the sort relevant string from a [:line:]: cuts the parts defined
   /// in the command line: some character/word ranges
   List<SortItem> build(String line, int lineNo) {
-    final rc = <SortItem>[];
+    var rc = <SortItem>[];
     int length = line.length;
     if (mode == 'c') {
       var rangeNo = 0;
@@ -504,45 +612,14 @@ class SortInfo {
         }
       }
     } else if (mode == 'r') {
-      if (regExpRelevant == null) {
-        rc.add(defaultItem);
+      if (filter == null && filters == null) {
+        throw WordingError('sort: missing "filter" or "Filters"');
+      } else if (filter != null && filters != null) {
+        throw WordingError('sort: do not define "filter" and "Filters"');
+      } else if (filter != null) {
+        rc = buildFilterItems(line, lineNo);
       } else {
-        final matcher = regExpRelevant?.firstMatch(line);
-        if (matcher == null) {
-          logger.log('unmatched: $line');
-        } else {
-          if (ranges == null) {
-            rc.add(defaultItem);
-          } else {
-            final words = <String>[];
-            for (var ix = 1; ix <= matcher.groupCount; ix++) {
-              words.add(matcher.group(ix) ?? '');
-            }
-            final count = words.length;
-            for (var range in ranges ?? defaultRangeList) {
-              if (range.from < count) {
-                final last = min(count - 1, range.to);
-                final items = words.sublist(range.from, last + 1);
-                if (range.numeric) {
-                  final items2 = <double>[];
-                  var rangeNo = 0;
-                  for (var value in items) {
-                    var value2 = double.tryParse(value);
-                    if (value2 == null) {
-                      logger.log(
-                          'line $lineNo: word "$value" in range $rangeNo is not a number');
-                      value2 = 0.0;
-                    }
-                    items2.add(value2);
-                  }
-                  rc.add(SortItem(true, floatValues: items2));
-                } else {
-                  rc.add(SortItem(false, stringValues: items));
-                }
-              }
-            }
-          }
-        }
+        rc = buildFiltersItems(line, lineNo);
       }
     } else {
       throw InternalError('SortInfo.build()', 'unknown mode: $mode');
@@ -676,24 +753,27 @@ class TextButler extends Logger {
     '',
     'execute input=input',
     r'#input: copy text="Hi "\ncopy append text="world',
-    ''
-        r'filter start=r/^Name: Miller/ end=r/^Name:/ filter=r/^\s*[^#\s]/',
+    '',
+    r'filter start=r/^Name: Miller/ end=r/^Name:/ filter=r/^\s*[^#\s]/',
     r'filter Filters=;r/<(name|id|email>(.*?)</;r/href="(.*?)"/ meta=% '
         'Templates=,"%group2%: %group1%1","link: %group2%"',
     '',
     r'replace meta=& What=;r/ (\d+)/;": &0&"',
     r'replace What=;"Hello";"Hi"',
     '',
+    'reverse input=output',
+    '',
     'show',
     'show what=buffers',
     '',
     'sort',
     'sort',
-    'sort output=sorted how="c1-4,8-10"',
-    'sort input=sorted how="w3,n4,1" separator=","',
-    r'sort how="w3,n4,1" separator=/\s*,\s*/',
-    r'sort how="r1,n2-3/name: (\w+) id: (\d+) role: (\w+)/i"'
-        '',
+    'sort output=sorted ranges="1-4,8-10"',
+    'sort input=sorted ranges="3-4,n2,1" separator=","',
+    r'sort ranges="3,n4,1" separator=r/\s*,\s*/',
+    r'sort ranges="1,n2-3" filter=R/name: (\w+) id: (\d+) year: (\d+)/',
+    r'sort input=data Filters=;r/MBytes: ([\d.]+)/;r/dirs: (\d+)/;r/files: (\d+)/ ranges="n1,n1,n1"',
+    '',
     'swap a=input b=output',
   ];
   static final defaultBufferNames = [
@@ -719,7 +799,7 @@ class TextButler extends Logger {
 
   final regExpEndOfParameter = RegExp(r'[ =]');
   final regExpAutoSeparator = RegExp(r'[^a-zA-Z0-9]');
-  final regExpSortInfo = RegExp(r'^[cw][\dn,-]*|^r[\dn,-]*(/.*)?');
+  final regExpRanges = RegExp(r'^[\dn,-]*');
   final paramBool = ParameterInfo(ParameterType.bool);
   final paramBaseChar = ParameterInfo(ParameterType.string,
       defaultValue: 'A', minLength: 1, maxLength: 1, delimited: false);
@@ -759,9 +839,9 @@ class TextButler extends Logger {
   final paramString = ParameterInfo(ParameterType.string);
   final ParameterInfo paramSelector =
       ParameterInfo(ParameterType.string, minLength: 1);
-  // Will be changed in the constructor!
-  ParameterInfo paramSortInfo = ParameterInfo(ParameterType.string);
-
+  ParameterInfo paramRanges = ParameterInfo(ParameterType.string);
+  ParameterInfo paramSortType = ParameterInfo(ParameterType.keyword,
+      keywords: ['char', 'word', 'regexpr'], defaultValue: 'char');
   final paramStringListAutoSeparator = ParameterInfo(ParameterType.stringList,
       minLength: 2, autoSeparator: true);
 
@@ -773,8 +853,6 @@ class TextButler extends Logger {
   String stringParameters = '';
 
   TextButler() {
-    paramSortInfo = ParameterInfo(ParameterType.string,
-        minLength: 1, pattern: regExpSortInfo);
     for (var item in examples) {
       if (item.isNotEmpty) {
         final name = item.split(' ')[0];
@@ -853,6 +931,21 @@ class TextButler extends Logger {
                   'parameter "$name" must have the the type ${expectedParameter.type} not ${currentValue.parameterType}');
             }
             break;
+          case ParameterType.keyword:
+            var found = false;
+            final word = currentValue!.string!;
+            for (var keyword in expectedParameter.keywords!) {
+              if (keyword.startsWith(word)) {
+                currentValue.string = word;
+                found = true;
+                break;
+              }
+            }
+            if (!found) {
+              throw WordingError(
+                  'unknown keyword $word. Expected: ${expectedParameter.keywords!.join(' ')}');
+            }
+            break;
         }
       }
     }
@@ -874,6 +967,9 @@ class TextButler extends Logger {
       case ParameterType.stringList:
       case ParameterType.listOfStringList:
         throw InternalError('defaultValue()', 'unexpected type: $type');
+      case ParameterType.keyword:
+        rc = ParameterValue(type, string: defaultValue);
+        break;
       case ParameterType.nat:
         if (defaultValue == null) {
           throw InternalError('defaultValue()', 'defaultValue is null');
@@ -921,6 +1017,9 @@ class TextButler extends Logger {
         break;
       case 'replace':
         executeReplace();
+        break;
+      case 'reverse':
+        executeReverse();
         break;
       case 'show':
         executeShow();
@@ -1252,6 +1351,25 @@ class TextButler extends Logger {
 
   /// Implements the command "replace" specified by some [:parameters:].
   /// Throws an exception on errors.
+  void executeReverse() {
+    // 'show what=buffers',
+    final expected = {
+      'input': paramBufferName,
+      'output': paramBufferName,
+    };
+    final current = splitParameters(expected);
+    current.setIfUndefined('input', 'input');
+    current.setIfUndefined('output', 'output');
+    checkParameters(current, expected);
+    final input = current.asString('input');
+    final output = current.asString('output');
+    final lines = getBuffer(input).split('\n');
+    final lines2 = lines.reversed.join('\n');
+    buffers[output] = lines2;
+  }
+
+  /// Implements the command "replace" specified by some [:parameters:].
+  /// Throws an exception on errors.
   void executeShow() {
     // 'show what=buffers',
     final expected = {
@@ -1274,38 +1392,49 @@ class TextButler extends Logger {
   /// Implements the command "sort" specified by some [:parameters:].
   /// Throws an exception on errors.
   void executeSort() {
-    // 'sort a=input b=output how=c2-4,8- separator=,
-    // 'sort a=input b=output how="w4,2,8-',
-    // 'sort a=input b=output how="r3,2-3/bytes: (\d+) files: (\d+) dirs: (\d+)',
+    // 'sort a=input b=output ranges=n2-4,8 separator=,
+    // 'sort a=input b=output ranges="n3,n2-3" regexpr=r/bytes: (\d+) files: (\d+) dirs: (\d+)'
     final expected = {
       'input': paramBufferName,
       'output': paramBufferName,
-      'how': paramSortInfo,
+      'type': paramSortType,
+      'ranges': paramString,
+      'filter': paramPattern,
+      'Filters': paramPatternList,
       'separator': paramPattern
     };
     final current = splitParameters(expected);
     current.setIfUndefined('input', 'input');
     current.setIfUndefined('output', 'output');
+    current.setIfUndefined('type', 'char');
     checkParameters(current, expected);
     final input = current.asString('input');
     final output = current.asString('output');
-    final how = current.hasParameter('how') ? current.asString('how') : null;
+    var type = current.asKeyword('type');
+    final filters = current.hasParameter('Filters')
+        ? current.map['Filters']!.asPatterns()
+        : null;
+    final ranges =
+        current.hasParameter('ranges') ? current.asString('ranges') : null;
+    final filter =
+        current.hasParameter('filter') ? current.asRegExp('filter') : null;
     final separator = current.hasParameter('separator')
         ? current.asRegExp('separator')
         : null;
-
+    if (separator != null) type = 'word';
+    if (filter != null) {
+      type = 'regexpr';
+    }
     final lines = getBuffer(input).split('\n');
     String content;
-    if (how == null) {
+    if (ranges == null) {
       lines.sort();
       content = lines.join('\n');
     } else {
-      final mode = how.substring(0, 1);
-      final parts = how.substring(1).split('/').toList();
-      final ranges = parts[0].split(',');
-      final ranges2 = <SortRange>[];
+      final ranges2 = ranges.split(',');
+      final ranges3 = <SortRange>[];
       var rangeNo = 0;
-      for (var range in ranges) {
+      for (var range in ranges2) {
         rangeNo++;
         var numeric = false;
         if (range.startsWith('n')) {
@@ -1313,7 +1442,7 @@ class TextButler extends Logger {
           range = range.substring(1);
         }
         if (range.isEmpty) {
-          ranges2.add(SortRange(0, 0xffffffff, numeric));
+          ranges3.add(SortRange(0, 0xffffffff, numeric));
         } else {
           final items = range.split('-');
           final value1 = int.tryParse(items[0]);
@@ -1328,22 +1457,15 @@ class TextButler extends Logger {
             throw WordingError(
                 'range $rangeNo: second column is not a decimal: ${items[1]}');
           }
-          ranges2
+          ranges3
               .add(SortRange(max(1, value1) - 1, max(1, value2) - 1, numeric));
         }
       }
-      RegExp? regExpRelevant;
-      if (mode == 'r') {
-        if (parts.length < 2) {
-          throw WordingError(
-              'missing regexpr behind the ranges in {how}. example: "r2-3,1/name: (\\w+) id: (\\d+) role: (\\w+)/i"');
-        } else {
-          bool caseSensitive = parts[2].contains('i');
-          regExpRelevant = RegExp(parts[1], caseSensitive: caseSensitive);
-        }
+      if (type.startsWith('r') && filter == null) {
+        throw WordingError('missing parameter regexpr');
       }
-      final info = SortInfo(this, mode, ranges2,
-          separator: separator, regExpRelevant: regExpRelevant);
+      final info = SortInfo(this, type.substring(0, 1), ranges3,
+          separator: separator, filter: filter, filters: filters);
       content = info.sort(lines);
     }
     buffers[output] = content;
@@ -1471,7 +1593,7 @@ class TextButler extends Logger {
     if (buffers['log'] == '') {
       buffers['log'] = buffers['log']! + message;
     } else {
-      buffers['log'] = '${buffers['log']!}\n$message';
+      buffers['log'] = '$message\n${buffers['log']!}';
     }
     return true;
   }
@@ -1798,6 +1920,10 @@ class TextButler extends Logger {
             break;
           case ParameterType.listOfStringList:
             parseListOfStringList(name, map);
+            break;
+          case ParameterType.keyword:
+            map[name] = ParameterValue(ParameterType.string,
+                string: unshiftNonSpaces());
             break;
         }
         stringParameters = stringParameters.trimLeft();

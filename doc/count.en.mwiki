@@ -1,0 +1,60 @@
+Counts the occurrence of a search pattern in a buffer.
+
+=== Parameters ===
+
+{| class="wikitable"
+! Name
+! Type
+! Description
+! Example
+|-
+| '''append'''
+| [[English Documentation#parametertypes|bool]]
+| The result is appended in the destination buffer.
+| append
+|-
+| '''input'''
+| [[English Documentation#parametertypes|bufferName]]
+| This buffer is counted. Default: input
+| input=addresses
+|-
+| '''output'''
+| [[English Documentation#parametertypes|bufferName]]
+| The result is written into this buffer. Default: output
+| output=result
+|-
+| '''marker'''
+| [[English Documentation#parametertypes|character]]
+| Defines a placeholder for the result number in '''template'''. Default: '#'
+| marker=*
+|-
+| '''template'''
+| [[English-Documentation#parametertypes|string]]
+| Template of what the result message looks like. Must contain '''marker'''. Default: the value of '''marker'''
+| template="# hits: *"
+|-
+| '''what'''
+| [[English-Documentation#parametertypes|pattern]]
+| Search pattern: String (also interpolated) or regular expression
+| what="address"<br>what=r/\d+/
+|}
+
+=== Examples ===
+The "input" buffer contains:
+<pre>Be or not to be, that's the question!
+Hic Rhodes, Hic salta!
+</pre>
+Command:
+<pre>count what="e"
+</pre>
+After that it says in "output":
+4
+</pre>
+Commands:
+<pre>count what=r/\S+/ template="# words" output=statistic
+count regexpr=r/[.;!?]/ t=', # sets' o=statistic append
+count regexpr=r/./ t=', # characters' o=statistic append
+</pre>
+Then the buffer says "statistic":
+<pre>12 words, 2 sentences, 59 characters
+</pre>

@@ -1,0 +1,149 @@
+"Multiplying" a text, whereby consecutive numbers, consecutive character strings or specified individual values ​​can be contained with placeholders.
+
+These placeholders are inserted in the template text and replaced with concrete values ​​when duplicating.
+
+=== Parameters ===
+{| class="wikitable"
+! Name
+! Type
+! Description
+! Example
+|-
+| '''append'''
+| [[English Documentation#parametertypes|bool]]
+| The result is appended in the destination buffer.
+| <code>append</code>
+|-
+| '''baseChar'''
+| [[English Documentation#parametertypes|character]]
+| Base for running string.
+| <code>baseChar=a</code>
+|-
+| '''BaseChars'''
+| [[English Documentation#parametertypes|string]]
+| Bases for running string when using multiple running elements.
+| <code>BaseChars="aA"</code>
+|-
+| '''count'''
+| [[English Documentation#parametertypes|nat]]
+| How many times the text is copied.
+| <code>count=3</code>
+|-
+| '''input'''
+| [[English Documentation#parametertypes|bufferName]]
+| The text from this buffer is duplicated. Default: input
+| <code>input=data</code>
+|-
+| '''ListValues'''
+| [[English Documentation#parametertypes|listOfStringList]]
+| a list of text lists if multiple continuous elements are used. Nested auto separators:
+One to separate the "areas", in the example ";", one for each area to separate the values, in the example "," and "/".
+| <code>ListValues=";,"adam","berta","charly";"/male/female/diverse";,"41","23","59"</code>
+|-
+| '''meta'''
+| [[English Documentation#parametertypes|character]]
+| Delimiter for the placeholders inside '''input'''. Default: %
+| <code>meta=%</code>
+|-
+| '''offset'''
+| [[English Documentation#parametertypes|nat]]
+| Base for running elements. Default: 0
+| <code>offset=100</code>
+|-
+| '''Offsets'''
+| [[English-Documentation#parametertypes|natList]]
+| A list of offsets when using multiple contiguous items.
+| <code>Offsets=10,1,100</code>
+|-
+| '''output'''
+| [[English-Documentation#parametertypes|bufferName]]
+| the result is written to this buffer. Default: output
+| <code>output=result</code>
+|-
+| '''step'''
+| [[English Documentation#parametertypes|nat]]
+| Distance between two continuous elements.
+| <code>step=2</code>
+|-
+| '''Step'''
+| [[English Documentation#parametertypes|natList]]
+| A list of '''step''' specifications when multiple continuous elements are used.
+| <code>Steps=2,1,10</code>
+|-
+| '''Values'''
+| [[English Documentation#parametertypes|stringList]]
+| A list of texts to be inserted consecutively. auto separator. Can also be interpolated text.
+| <code>Values=",bob,eva"</code><br/>
+<code>Values=i%",%tone%n,%ttwo%n,%tthree%n"</code>
+|}
+* The BaseChars, ListValues, Offsets and Steps parameters, if used, must each have the same number of elements.
+
+=== Wildcard ===
+Note: the delimiters of the placeholders can be freely selected (parameter meta), % is used in the example.
+
+* '''%index''': a consecutive number, starting with 0.
+* '''%number''': a consecutive number, starting with parameter '''offset''' and distance '''step'''.
+* '''%char%''': a running character, starting with '''baseChar'''.
+* '''%value%''': an item from the list of '''Values'''.
+
+If several continuous elements are required, the following will help:
+* '''%number0%''': sequential number, starting with the first element of '''Offsets''' and offsetting the first element of '''Steps'''.
+* '''%number1%''': consecutive number, starting with the second element of '''Offsets''' and offsetting the second element of '''Steps'''.
+and so forth
+* '''%char0%''': a consecutive character, starting with the first element of '''BaseChars'''.
+* '''%char1%''': a continuous character, starting with the second element of '''BaseChars'''.
+and so forth
+
+=== Examples ===
+The input buffer contains:
+<pre>no: %index% id: %number% place: %char%
+</pre>
+The output buffer contains:
+<pre>= list:
+</pre>
+Command:
+<pre>duplicate count=2 offset=100 step=10 baseChar=Q append
+</pre>
+After that, the buffer shows output:
+<pre>= list:
+no: 0 id: 100 place: Q
+no: 1 id: 110 place: R
+</pre>
+
+The input buffer contains:
+<pre>no: !index! id: !number0! place !char0! key: !char1!!char1!!char1!
+</pre>
+Command:
+<pre>duplicate count=3 Offsets=10.0 Steps=5.1 BaseChar="Ak" meta=! out=list
+</pre>
+Then in the buffer "list":
+<pre>no: 0 id: 10 place A key: kkk
+no: 1 id: 15 place B key: lll
+no: 2 id: 20 place C key: mmm
+</pre>
+
+The "input" buffer contains:
+<pre>animal %number%: %value%
+</pre>
+Command:
+<pre>duplicate count=2 offset=1 Values=",cat,dog"
+</pre>
+
+Then in the buffer "output":
+<pre>animal 1: cat
+animal 2: dog
+</pre>
+
+The "input" buffer contains:
+<pre>animal %value0% named %value1% comes from %value2%.
+</pre>
+Command:
+<pre>duplicate count=2 ListValues=";,cat,dog;,Mia,Harro;,London,Rome"
+</pre>
+
+'''Note:''' the list of lists uses the separator ";", the text lists the separator ",".
+
+After that the buffer "output" contains:
+<pre>animal cat named Mia comes from London.
+animal dog named Harro comes from Rome.
+</pre>

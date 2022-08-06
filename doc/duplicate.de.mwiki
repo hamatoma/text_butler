@@ -1,0 +1,149 @@
+"Vervielfachen" eines Textes, wobei mit Platzhaltern laufende Nummern, laufende Zeichenfolgen oder spezifizierte Einzelwerte enthalten sein können.
+
+Diese Platzhalter werden im Vorlagetext eingefügt und bei der Duplizierung durch konkrete Werte ersetzt.
+
+=== Parameter ===
+{| class="wikitable"
+! Name
+! Typ
+! Beschreibung
+! Beispiel
+|-
+| '''append'''
+| [[Deutsche-Dokumentation#parametertypen|bool]]
+| Das Ergebnis wird im Zielpuffer angehängt.
+| <code>append</code>
+|-
+| '''baseChar'''
+| [[Deutsche-Dokumentation#parametertypen|character]]
+| Basis für laufende Zeichenfolge.
+| <code>baseChar=a</code>
+|-
+| '''BaseChars'''
+| [[Deutsche-Dokumentation#parametertypen|string]]
+| Basen für laufende Zeichenfolge, wenn mehrere  fortlaufende Elemente verwendet werden.
+| <code>BaseChars="aA"</code>
+|-
+| '''count'''
+| [[Deutsche-Dokumentation#parametertypen|nat]]
+| So oft wird der Text kopiert.
+| <code>count=3</code>
+|-
+| '''input'''
+| [[Deutsche-Dokumentation#parametertypen|bufferName]]
+| Der Text aus diesem Puffer wird vervielfacht. Voreinstellung: input
+| <code>input=data</code>
+|-
+| '''ListValues'''
+| [[Deutsche-Dokumentation#parametertypen|listOfStringList]]
+| eine Liste von Textlisten, wenn mehrere fortlaufende Elemente verwendet werden. Verschachtelte Auto-Separatoren:
+Einer zum Trennen der "Bereiche", im Beispiel ";", je Bereich einer zum Trennen der Werte, im Beispiel "," und "/".
+| <code>ListValues=";,"adam","berta","charly";"/male/female/diverse";,"41","23","59"</code>
+|-
+| '''meta'''
+| [[Deutsche-Dokumentation#parametertypen|character]]
+| Delimiter für die Platzhalter innerhalb von '''input'''. Voreinstellung: %
+| <code>meta=%</code>
+|-
+| '''offset'''
+| [[Deutsche-Dokumentation#parametertypen|nat]]
+| Basis für laufende Elemente. Voreinstellung: 0
+| <code>offset=100</code>
+|-
+| '''Offsets'''
+| [[Deutsche-Dokumentation#parametertypen|natList]]
+| Eine Liste von Offsets, wenn mehrere fortlaufende Elemente verwendet werden.
+| <code>Offsets=10,1,100</code>
+|-
+| '''output'''
+| [[Deutsche-Dokumentation#parametertypen|bufferName]]
+| das Ergebnis wird in diesen Puffer geschrieben. Voreinstellung: output
+| <code>output=result</code>
+|-
+| '''step'''
+| [[Deutsche-Dokumentation#parametertypen|nat]]
+| Abstand zwischen zwei fortlaufenden Elementen.
+| <code>step=2</code>
+|-
+| '''Steps'''
+| [[Deutsche-Dokumentation#parametertypen|natList]]
+| Eine Liste von '''step'''-Angaben, wenn mehrere fortlaufende Elemente verwendet werden.
+| <code>Steps=2,1,10</code>
+|-
+| '''Values'''
+| [[Deutsche-Dokumentation#parametertypen|stringList]]
+| Eine Liste von Texten, die fortlaufend eingefügt werden. Auto-Separator. Kann auch interpolierter Text sein.
+| <code>Values=",bob,eva"</code><br/>
+<code>Values=i%",%tone%n,%ttwo%n,%tthree%n"</code>
+|}
+* Die Parameter BaseChars, ListValues, Offsets und Steps müssen, falls benutzt, jeweils gleich viele Elemente besitzen.
+
+=== Platzhalter ===
+Hinweis: die Delimiter der Platzhalter sind frei wählbar (Parameter meta), im Beispiel wird % verwendet.
+
+* '''%index''': eine fortlaufende Zahl, beginnend mit 0.
+* '''%number''': eine fortlaufende Zahl, beginnend mit Parameter '''offset''' und Abstand '''step'''.
+* '''%char%''': ein fortlaufendes Zeichen, beginnend mit '''baseChar'''.
+* '''%value%''': ein Element aus der Liste von '''Values'''.
+
+Werden mehrere fortlaufende Elemente benötigt, so helfen:
+* '''%number0%''': fortlaufende Zahl, beginnend mit dem ersten Elemement von '''Offsets''' und dem Abstand des ersten Elements von '''Steps'''.
+* '''%number1%''': fortlaufende Zahl, beginnend mit dem zweiten Elemement von '''Offsets''' und dem Abstand des zweiten Elements von '''Steps'''.
+und so weiter
+* '''%char0%''': ein fortlaufendes Zeichen, beginnend mit dem ersten Element von '''BaseChars'''.
+* '''%char1%''': ein fortlaufendes Zeichen, beginnend mit dem zweiten Element von '''BaseChars'''.
+und so weiter
+
+=== Beispiele ===
+Im Puffer input steht:
+<pre>no: %index% id: %number% place: %char%
+</pre>
+Im Puffer output steht:
+<pre>= List:
+</pre>
+Kommando:
+<pre>duplicate count=2 offset=100 step=10 baseChar=Q append
+</pre>
+Danach steht im Puffer output:
+<pre>= List:
+no: 0 id: 100 place: Q
+no: 1 id: 110 place: R
+</pre>
+
+Im Puffer input steht:
+<pre>no: !index! id: !number0! place !char0! key: !char1!!char1!!char1!
+</pre>
+Kommando:
+<pre>duplicate count=3 Offsets=10,0 Steps=5,1 BaseChar="Ak" meta=! out=list
+</pre>
+Danach steht im Puffer "list":
+<pre>no: 0 id: 10 place A key: kkk
+no: 1 id: 15 place B key: lll
+no: 2 id: 20 place C key: mmm
+</pre>
+
+Im Puffer "input" steht:
+<pre>animal %number%: %value%
+</pre>
+Kommando:
+<pre>duplicate count=2 offset=1 Values=",cat,dog"
+</pre>
+
+Danach steht im Puffer "output":
+<pre>animal 1: cat
+animal 2: dog
+</pre>
+
+Im Puffer "input" steht:
+<pre>animal %value0% named %value1% comes from %value2%.
+</pre>
+Kommando:
+<pre>duplicate count=2 ListValues=";,cat,dog;,Mia,Harro;,London,Rome"
+</pre>
+
+'''Hinweis:''' die Liste der Listen benutzt den Separator ";", die Textlisten den Separator ",".
+
+Danach steht im Puffer "output":
+<pre>animal cat named Mia comes from London.
+animal dog named Harro comes from Rome.
+</pre>

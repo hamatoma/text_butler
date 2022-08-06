@@ -1,0 +1,49 @@
+=== Parameters ===
+{| class="wikitable"
+! Surname
+! Type
+! description
+! example
+|-
+| '''append'''
+| [[English-Documentation#parametertypes|bool]]
+| The result is appended in the destination buffer
+| append
+|-
+| '''input'''
+| [[English-Documentation#parametertypes|bufferName]]
+| Buffer being copied. Default: input
+| input=examples
+|-
+| '''output'''
+| [[English-Documentation#parametertypes|bufferName]]
+| The result is written into this buffer. Default: output
+| output=result
+|-
+| '''text'''
+| [[English Documentation#parametertypes|string]]
+| Can be specified as an alternative to '''input'''. Then this text is copied to the destination.
+Can also be a '''interpolated text''', then the delimiter is preceded by i and the Esc character.
+| text="Hello" text=i%"First line%nSecond line"
+|}
+
+=== Examples ===
+The "input" buffer contains:
+<pre>Hello world
+</pre>
+The "todo" buffer contains:
+<pre>Greetings
+</pre>
+Command:
+<pre>copy out=todo append
+</pre>
+After that the contents in "todo" is:
+<pre>Greetings
+Hello World
+</pre>
+Command:
+<pre>copy text="Hi Jonny!"
+</pre>
+Then the "output" buffer contains:
+<pre>Hi Johnny!
+</pre>

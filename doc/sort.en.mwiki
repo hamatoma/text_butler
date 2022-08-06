@@ -1,0 +1,95 @@
+Sort rows according to different criteria.
+
+* The ranges relevant for sorting can be character ranges (from character x to character y) or word based (from word x to word y) or can be defined by a regular expression.
+* The word separators can be defined.
+* Multiple ranges can be defined.
+* A range can be marked as "numeric": Then the sorting takes place according to the numerical value, not alphanumerically. Numbers can be integers or floating point numbers.
+
+=== Parameters ===
+
+{| class="wikitable"
+! Name
+! Type
+! Description
+! Example
+|-
+| '''input'''
+| [[English-Documentation#parametertypes|bufferName]]
+| The text from this buffer is examined. Default: input
+| <code>input=data</code>
+|-
+| '''output'''
+| [[English-Documentation#parametertypes|bufferName]]
+| the result is written to this buffer. Default: output
+| <code>output=result</code>
+|-
+| '''type'''
+| [[English-Documentation#parametertypes|string]]
+| Range type: char word regexpr Default: char
+| <code>type=word</code>
+|-
+| '''ranges'''
+| [[English-Documentation#parametertypes|string]]
+| Syntax: ['n']start[-end] A range consists of a start value and possibly an end value, which is separated by '-'. The range can start with 'n', then it is numeric. Several areas can be specified, separator is ','. Start and end values ​​start with 1 for the first value. The final value is included. If no end value is specified, the start value is also the end value.
+| <code>n3,n4-5,1</code><br/>
+|-
+| '''filter'''
+| [[English-Documentation#parametertypes|pattern]]
+| A pattern (regular expression) that defines search scopes. The search-relevant character strings are defined as groups (enclosed by '(' and ')'). This parameter automatically sets the type to "regexpr".
+| <code>regexpr=r/name: (\w+).*id: (\d+).*role: (\w+)/</code>
+|-
+| '''Filters'''
+| [[English-Dokumentation#parametertypen|patternList]]
+| A list of patterns (regular expressions) that defines search scopes. The search-relevant character strings are defined as groups (enclosed by '(' and ')'). This parameter automatically sets the type to "regexpr".
+| <code>Filters=;r/id: (\d+)r/;r/name: (\w+)/;r/role: (\w+)/</code>
+|-
+| '''separator'''
+| [[English-Documentation#parametertypes|pattern]]
+| A regular expression that defines search scopes. The search-relevant character strings are defined as groups (enclosed by '(' and ')'). This parameter automatically sets the type to "word". Default: whitespaces <code>r/\s+/</code>
+| <code>sep=","</code><br><code>sep=r/[,;]/</code>
+|}
+
+=== Examples ===
+==== Example 1: Sorting a CSV file ====
+In the buffer csv is:
+<pre>Joe,1,user
+Bob, 2, Adm
+Charlie,11,user
+</pre>
+Command:
+<pre>sort input=csv type=word ranges=3,n2,1 separator=","
+reverse input=output output=csv
+</pre>
+The result buffer output (default setting) contains:
+<pre>Bob,2,adm
+Joe,1,user
+Charlie,11,user
+</pre>
+==== Example 2: Sorting a file statistic with one regular expression ====
+The data buffer contains:
+<pre>home: dirs: 122 hidden-dirs: 29 files: 38299 MBytes: 1203,042
+opt: dirs: 29 files: 1239 MBytes: 123,432
+data: dirs: 4988 files: 792374 MBytes: 542034.774
+</pre>
+Command:
+<pre>sort input=data regexpr=r/dirs: (\d+).*files: (\d+).*MBytes: (\S+)/ ranges=n2,n3
+</pre>
+The result buffer output (default setting) contains, sorted by data volume:
+<pre>data: dirs: 4988 files: 792374 MBytes: 542034.774
+home: dirs: 122 hidden-dirs: 29 files: 38299 MBytes: 1203,042
+opt: dirs: 29 files: 1239 MBytes: 123,432
+</pre>
+==== Example 3: Sorting a file statistic with a list of regular expressions ====
+The buffer data contains:
+<pre>home: dirs: 122 hidden-dirs: 29 files: 38299 MBytes: 1203.042
+opt: dirs: 29 files: 1239 MBytes: 123.432
+data: dirs: 4988 files: 792374 MBytes: 542034.774
+</pre>
+Command:
+<pre>sort input=data Filters=;r/MBytes: ([\d.]+)/;r/dirs: (\d+)/;r/files: (\d+)/ ranges="n1,n1,n1"
+</pre>
+The buffer output (default) contains, sorted by the size:
+<pre>data: dirs: 4988 files: 792374 MBytes: 542034.774
+home: dirs: 122 hidden-dirs: 29 files: 38299 MBytes: 1203.042
+opt: dirs: 29 files: 1239 MBytes: 123.432
+</pre>

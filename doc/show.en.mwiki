@@ -1,0 +1,37 @@
+Displays information about internal structures.
+
+=== Parameters ===
+
+{| class="wikitable"
+! Name
+! Type
+! Description
+! Example
+|-
+| '''append'''
+| [[English-Documentation#parametertypes|bool]]
+| The result is appended in the destination buffer.
+| append
+|-
+| '''output'''
+| [[English-Documentation#parametertypes|bufferName]]
+| the result is written to this buffer. Default: output
+| output=result
+|-
+| '''what'''
+| [[English-Documentation#parametertypes|string]] (without delimiter)
+| Specifies what to output. Possible are: buffers Default: buffers
+| what=buffers
+|}
+
+=== Example ===
+Command:
+<pre>show what=buffers
+</pre>
+Then in the buffer "output":
+<pre>examples
+History
+input
+output
+log
+</pre>

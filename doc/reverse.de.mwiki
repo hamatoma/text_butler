@@ -1,0 +1,32 @@
+Dreht die Reihenfolge der Zeilen um.
+
+=== Parameter ===
+{| class="wikitable"
+! Name
+! Typ
+! Beschreibung
+! Beispiel
+|-
+| '''input'''
+| [[Deutsche-Dokumentation#parametertypen|bufferName]]
+| Quellpuffer. Voreinstellung: '''input'''
+| input=history
+|-
+| '''output'''
+| [[Deutsche-Dokumentation#parametertypen|bufferName]]
+| Zielpuffer. Voreinstellung: '''output'''
+| output=data
+|}
+
+=== Beispiel ===
+Im Puffer birthdays steht:
+<pre>3.1 Charly
+9.8 Ada
+4.12 Bob
+</pre>
+* Kommando <code>reverse inp=birtdays</code>
+Danach steht in output:
+<pre>4.12 Bob
+9.8 Ada
+3.1 Charly
+</pre>

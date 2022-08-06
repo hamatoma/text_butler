@@ -1,0 +1,184 @@
+= Überblick =
+* [[clear]] Es kann ein Puffer gelöscht werden. Existiert der Puffer noch nicht, wird er angelegt.
+* [[copy]] Kopiert einen Puffer in einen anderen, oder einen gegebenen Text in einen Puffer.
+* [[count]] Zählt das Vorkommen eines Suchmusters in einem Puffer.
+* [[duplicate]] "Vervielfachen" eines Textes, wobei mit Platzhaltern laufende Nummern, laufende Zeichenfolgen oder spezifizierte Einzelwerte enthalten sein können.
+* [[execute]] Ausführen von Kommandos in einem Puffer.
+* [[filter]] Mit Suchmustern werden die Teile der Eingabe spezifiziert, die in der Ausgabe erscheinen sollen.
+* [[load]] Laden eines Puffers mit einem Dateiinhalt.
+* [[replace]] Damit können Suchmuster ersetzt werden. Als Suchmuster sind Strings oder reguläre Ausdrücke möglich.
+* [[reverse]] Sortiere die Zeilen in umgekehrter Reihenfolge.
+* [[show]] Gibt Informationen über interne Strukturen aus.
+* [[sort]] Sortiere zeilenweise.
+* [[store]] Speichern eines Puffers in eine Datei.
+* [[swap]] Vertauscht den Inhalt von zwei Puffern.
+
+= Zielsetzung =
+Der Textbutler ist eine Flutter-App. Diese erlaubt die "Wandlung von Text", wobei ein
+'''Eingabetext''' in einen '''Ausgabetext''' gewandelt wird, aber auch "Informationen" über einen Text.
+
+Als Wandlung gibt es:
+* "Multiplizierung": ein Text erscheint mehrfach, wobei Teile sich ändern, beispielsweise eine laufende Nummer.
+* Filterung: Durch Angabe von Suchmuster werden nur Teile der Vorlage übernommen
+* Löschungen: Durch Angabe von Suchmuster werden Teile der Vorlage entfernt
+* Ersetzungen: Durch Angabe eines Suchmusters und eines Ersatzes werden Teile gewandelt. Im Ersatztext können Referenzen auf die Trefferstelle enthalten sein.
+* Sortierung: Sortieren nach verschiedenen Vorgaben
+* Revertierung: Sortieren in umgekehrter Reihenfolge
+
+Als Informationen gibt es:
+* Die Anzahl eines Suchmusters
+
+= Aufbau (Syntax) =
+Die Aktionen werden mit "Kommandos" in einer Eingabezeile spezifiziert. Jedes Kommando hat Parameter.
+
+Das Programm verwaltet beliebig viele Textpuffer, die mit Namen gekennzeichnet sind.
+Es gibt vordefinierte Puffer:
+* input: wird standardmäßig als Vorlage der Wandlung benutzt.
+* output: wird standardmäßig als Ziel der Wandlung benutzt.
+* history: dort werden die Kommandos hinterlegt. Fehlerhafte Kommandos werden mit führendem "#" gekennzeichnet.
+* examples: zu jedem Kommando gib es dort mindestens ein Beispiel, es werden die wichtigsten Parameter aufgeführt.
+* log: Treten beim Verarbeiten Ungereimtheiten auf, werden die Meldungen hier ausgegeben.
+
+Das Programm bietet vier Textbereiche, für jeden Bereich kann mit einer Combobox bestimmt werden, welcher Puffer dort angezeigt wird. Jeder Puffer kann nur einmal angezeigt werden. Stellt man einen Puffer ein, der schon eine andere Anzeige hat, wird dieser Anzeige ein anderer noch nicht angezeigter Puffer zugeordnet.
+
+== Abkürzung von Kommandonamen und Parameternamen ==
+Kommandos können so lange verkürzt werden, wie die Eingabe eindeutig ist, ebenso die Parameter:
+Beispielsweise gibt es die Kommandos "clear", "copy" und "count". "cl" ist also eindeutig, oder "cop" oder "cou", nicht aber "c" oder "co".
+
+== Kommandos ==
+
+Kommandos bestehen aus dem '''Kommandonamen''' und '''Parametern''', die mit
+<code>parameter=wert</code> angegeben werden, außer bei boolschen Parameter,
+da entfällt die "Zuweisung". Die Reihenfolge der Parameter ist unerheblich.
+
+'''Konvention''' für '''Parameter im Plural''': Existiert ein Parameter im Singular und Plural, wird der Parameter im Plural '''groß geschrieben''': Beispiel: '''value''' und '''Values'''. Grund: Damit können beide Namen stark abgekürzt werden.
+
+Parameter mit Texten benötigen '''Delimiter'''. Jedes Zeichen außer Buchstaben und Ziffern darf als Delimiter benutzt werden, wichtig ist nur, dass der gewählte Delimiter am vor und nach dem String stehen.
+Zulässige Beispiele sind <code>regexpr=!<a href="#">(.*?)</a>!</code>, <code>what="super"</code>
+oder <code>text=?Delimiter sind " oder '?</code>.
+
+== Interpolierte Texte ==
+Es gibt noch '''interpolierte''' Texte: Diese werden mit einem 'i' und einem ESC-Zeichen vor dem Delimiter gekennzeichnet.
+
+'''Beispiel:'''
+<pre>
+text=i&"Name: joe&nId: 101&n"
+</pre>
+
+In interpolierten Texten können Meta-Konstrukte wie Zeilenwechsel, Tabulator... auftauchen:
+Diese werden mit dem ESC-Zeichen und einer Kennung geschrieben.
+Im Folgenden wird als ESC-Symbol & verwendet:
+* &n ist ein Zeilenwechsel
+* &t ist ein Tabulator
+* &r ist ein "Carriage Return" (Wagenrücklauf)
+* &v ist ein vertikaler Tabulator
+* &f ist ein FormFeed (Seitenwechsel)
+* <code>&<bufferName></code> ist der Inhalt des Puffers "bufferName"
+* '''Hinweis:''' Die Sonderform <code>&[bufferName]type</code>" kann für Stringlisten benutzt werden. Beschreibung weiter unten.
+
+== Strings ohne Delimiter ==
+Es gibt Strings, die keinen Delimiter brauchen, weil sie ein Zeichen lang sind, oder keine Blanks enthalten können (Puffernamen).
+
+'''Beispiel:'''
+<pre>
+input=script
+</pre>
+
+== Stringlisten, Autoseparator ==
+Parameter '''mit Listen''' benötigen einen Separator, der die Listenelemente trennt. Enthält die Liste Texte, so wird ein '''Auto-Separator''' benutzt: das ist das erste Zeichen der Liste.
+
+'''Beispiel:'''
+<pre>
+Values=;"a";i~/"Hi~n/;'/home/bin'</code>. 
+</pre>
+Hier wird eine Liste mit drei Texten definiert, der erste Text hat als Delimiter ", der zweite ist ein interpretierter Text mit Metazeichen ~ und Delimiter "/", der dritte benutzt als Delimiter '.
+
+Auto-Separatoren haben den Vorteil gegenüber festgelegten Separatoren, dass Konflikte mit dem restlichen Text vermieden werden können.
+
+== Stringlisten mit interpretiertem Text ==
+Eine Stringliste kann auch mit einem interpretierten String ausgedrückt werden. Der Inhalt der Liste wird dann aus einem Puffer geholt:
+* <code>i&"&[bufferName]type</code>&" Der Inhalt von Puffer "bufferName" wird als Liste eingesetzt, wobei "type" spezifiziert, wie der Inhalt in Listenelemente getrennt wird. "type" kann sein:
+    * '''line''' Jede Zeile ist ein Listenelement
+    * '''sentence''' Die Listenelemente werden durch Leerzeilen getrennt
+* Eine mehrfache Nutzung des Musters ist möglich, also das Zusammensetzen der Liste aus mehreren Puffern.
+* Eine Mischung mit konstanten Listenelementen und Listenelementen aus Puffern ist möglich.
+
+'''Beispiel:'''
+<pre>
+Values=;"header";i%"%[data]line%";"footer"
+</pre>
+In Puffer "data" steht:
+<pre>
+Jonny
+Eve
+</pre>
+Die Liste enthält dann die Elemente:
+<pre>
+header
+Jonny
+Eve
+footer
+</pre>
+
+== Reguläre Ausdrücke ==
+Ein regulärer Ausdruck ist syntaktisch ein String mit dem Prefix 'r' (Groß-/Kleinschreibung berücksichtigen) oder 'R' (Groß-/Kleinschreibung ist egal).
+
+Sinnvoll ist ein regulärer Ausdruck natürlich nur bei Suchmustern.
+
+'''Beispiele'''
+<pre>
+# Einfacher Suchstring für Dezimalzahlen:
+what=r/(\d+)/
+# Liste von Suchstrings, findet "<name>" und "<id>" und "<BR/>> und "<br/> ...
+What=;r/<(name|id)>/;R"<br/?>"
+</pre>
+
+Es ist eine Mischung mit interpretierten Texten möglich, dann steht vor dem Delimiter <code>ri<Esc></code> oder <code>Ri<Esc></code>:
+<pre>
+what=Ri&/###&<name>&\d+/
+</pre>
+Hier wird nach "###" gefolgt vom Inhalt des Puffers "name" gefolgt von einer Dezimalzahl gesucht, wobei die Groß-/Kleinschreibung keine Rolle spielt.
+
+== Parametertypen ==
+{| class="wikitable"
+! Name
+! Beschreibung
+! Beispiele
+|-
+| '''bool'''
+| Wahrzeitswert. Dazu wird kein Wert benötigt. Der "Wert" entsteht, wenn der Parameter mit Typ bool angegeben wird (ohne '=').
+|
+|-
+| '''bufferName'''
+| Name eines Puffers. Ohne Delimiter. Nur Buchstaben, Ziffern und '_'.
+| <code>input</code> <code>ScriptSQL</code>
+|-
+| '''character'''
+| genau ein Zeichen. Ohne Delimiter.
+| <code>%</code> <code>~</code>
+|-
+| '''nat'''
+| "natürliche" Zahl, das ist eine nichtnegative ganze Zahl.
+| <code>0</code> <code>3299</code>
+|-
+| '''natList'''
+| Liste mit natürlichen Zahlen, Separator ist das Komma ',', also kein Autoseparator.
+| <code>3,9,2,44</code>
+|-
+| '''pattern'''
+| Suchmuster: entweder ein String, ein Groß/Kleinschrebung ignorierender String, ein regulärer Ausdruck. Jeder dieser Untertypen darf interpolierend sein.
+| <code>"simple string"</code> <code>I/case insensitive string/</code> <code>i~"one~ntwo~n"</code> <code>r![rR]eg(ular)? [eE]xpr!</code>
+|-
+| '''patternList'''
+| Liste mit Suchmustern, mit Autoseparator.
+| <code>;r/[Rr]eg[eE]xp/;I/name/;"Adam"</code>
+|-
+| '''string'''
+| String mit Delimitern, auch interpoliert.
+| <code>"Adam"</code> <code>i~'1~n2'</code>
+|-
+| '''stringList'''
+| Liste mit Strings, mit Autoseparator.
+| <code>;"Adam";!"Adam" and "Eve"!</code>
+|}
+

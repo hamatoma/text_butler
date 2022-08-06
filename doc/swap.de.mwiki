@@ -1,0 +1,35 @@
+Vertauscht den Inhalt von zwei Puffern.
+
+=== Parameter ===
+{| class="wikitable"
+! Name
+! Typ
+! Beschreibung
+! Beispiel
+|-
+| '''a'''
+| [[Deutsche-Dokumentation#parametertypen|bufferName]]
+| Erster Tauschpuffer.
+| a=result
+|-
+| '''b'''
+| [[Deutsche-Dokumentation#parametertypen|bufferName]]
+| Zweiter Tauschpuffer.
+| b=input
+|}
+Ist kein Parameter angegeben, wird Puffer input und output vertauscht.
+
+=== Beispiel ===
+Im Puffer input steht:
+<pre>Write email
+</pre>
+Im Puffer todo steht:
+<pre>Listen podcast
+</pre>
+* Kommando <code>swap a=input b=todo</code>
+Danach steht in input:
+<pre>Listen podcast
+</pre>
+und in todo:
+<pre>Write email
+</pre>

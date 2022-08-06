@@ -1,0 +1,150 @@
+Mit Suchmustern werden die Teile der Eingabe spezifiziert, die in der Ausgabe erscheinen sollen.
+
+=== Parameter ===
+
+{| class="wikitable"
+! Name
+! Typ
+! Beschreibung
+! Beispiel
+|-
+| '''append'''
+| [[Deutsche-Dokumentation#parametertypen|bool]]
+| das Ergebnis wird im Zielpuffer angehängt
+| <code>app</code>
+|-
+| '''end'''
+| [[Deutsche-Dokumentation#parametertypen|pattern]]
+| Es werden nur Zeilen untersucht, die vor einer Zeile stehen, die auf dieses Suchmuster passt.
+| <code>end="</address>"</code>
+|-
+| '''filter'''
+| [[Deutsche-Dokumentation#parametertypen|pattern]]
+| Passt eine Zeile auf diesen regulärer Ausdruck, wird sie ins Ziel übernommen.
+| <code>filter=r/2021\.\d+.\d+/</code>
+|-
+| '''Filters'''
+| [[Deutsche-Dokumentation#parametertypen|patternList]]
+| Eine Liste von regulären Ausdrücken: Passte eine auf eine Zeile, wird diese ins Ziel übernommen. Auto-Separator.
+| <code>Filters=;/Hello /;r/[hH]i /"</code>
+|-
+| '''input'''
+| [[Deutsche-Dokumentation#parametertypen|bufferName]]
+| Der Text aus diesem Puffer wird gefiltert. Voreinstellung: input
+| <code>input=data</code>
+|-
+| '''meta'''
+| [[Deutsche-Dokumentation#parametertypen|character]]
+| Delimiter für die Platzhalter innerhalb von '''input'''. Voreinstellung: %
+| <code>meta=%</code>
+|-
+| '''output'''
+| [[Deutsche-Dokumentation#parametertypen|bufferName]]
+| das Ergebnis wird in diesen Puffer geschrieben. Voreinstellung: output
+| <code>output=result</code>
+|-
+| '''repeat'''
+| [[Deutsche-Dokumentation#parametertypen|nat]]
+| Ist diese Zahl größer 1, wird der Bereich '''start''' und '''end''' entsprechend oft gesucht. 0:  beliebig oft suchen.
+Nur sinnvoll, wenn sowohl '''start''' und '''end''' definiert sind. Voreinstellung: 1
+| repeat=5
+|-
+| '''start'''
+| [[Deutsche-Dokumentation#parametertypen|pattern]]
+| Es werden nur Zeilen untersucht, die hinter einer Zeile stehen, die auf dieses Suchmuster passt.
+| <code>start=/<address>/</code><br/><code>start=r/<(id|name)/</code>
+|-
+| '''template'''
+| [[Deutsche-Dokumentation#parametertypen|string]]
+| Für jeden Treffer wird diese Vorlage ausgegeben, nachdem dort die Platzhalter ersetzt wurden.
+Wird kein '''template''' angegeben, wird die ganze Zeile mit dem Treffer ausgegeben. Kann interpolierten Text enthalten.
+| <code>template=i~"Name: %1%~n"</code>
+|-
+| '''Templates'''
+| [[Deutsche-Dokumentation#parametertypen|stringList]]
+| Das Analogon zu '''template''', wenn '''Filters''' statt '''filter''' angegeben wurde.
+Der erste Eintrag in 'Templates' ist dem ersten Eintrag in '''Filters''' zugeordnet, usw.
+Wird kein '''Templates''' angegeben, wird die ganze Zeile mit dem Treffer ausgegeben. Kann interpolierten Text enthalten.
+| <code>Templates=;i~"Name: %1%~n";i~"Id: %1%~n"</code>
+|}
+
+'''Hinweise''':
+* Von den Parametern '''filter''' und '''Filters''' muss genau einer angegeben werden, also nicht keiner und nicht beide.
+* Von den Parametern '''template''' und '''Templates''' darf höchstens einer angegeben werden.
+
+=== Platzhalter ===
+In den Parametern '''template''' und '''Templates''' können folgende Platzhalter auftauchen:
+* %group0%: der gesamte Treffer des regulären Ausdrucks.
+* %group1%: das, was mit dem ersten Klammerpaar im regulären Ausdruck gefunden wird. Klammerpaare werden nach dem Auftreten der öffnenden Klammer nummeriert.
+* %group2%: das, was mit dem zweiten Klammerpaar im regulären Ausdruck gefunden wird.
+und so weiter.
+* %0%: die Kurzform für %group0%
+* %1%: die Kurzform für %group1%
+
+'''Hinweis:''' Die Delimiter "%" der Platzhalter kann über den Parameter '''meta''' geändert werden.
+
+=== Beispiele ===
+
+Gilt für alle Beispiele: In Puffer input steht:
+<pre><?xml version="1.0" encoding="UTF-8"?>
+<staff>
+  <company>
+    <name>Easy Rider</name>
+  </company>
+  <person>
+    <id>1</id>
+    <name>Adam</name>
+  </person>
+  <person>
+    <id>2</id>
+    <name>Berta</name>
+  </person>
+  <person>
+    <id>3</id>
+    <name>Charly</name>
+  </person>
+</staff>
+</pre>
+Kommando:
+<pre>filter fi=/name/
+</pre>
+In Puffer output steht:
+<pre>    <name>Easy Rider</name>
+    <name>Adam</name>
+    <name>Berta</name>
+    <name>Charly</name>
+</pre>
+Kommando:
+<pre>filter start=/<person/ end=!</person! fi=/name/ repeat=2
+</pre>
+In Puffer output steht:
+<pre>    <name>Adam</name>
+    <name>Berta</name>
+</pre>
+Kommando:
+<pre>filter start=/<person/ end=!</person! fi=r/<(name|id)>(.*?)</ repeat=2 template="%group1%: %group2%
+</pre>
+In Puffer output steht:
+<pre>id: 1
+name: Adam
+id: 2
+name Berta
+</pre>
+Kommando:
+<pre>filter start=/<person/ end=!</person! Filters=;"<name";"<id" repeat=2
+</pre>
+In Puffer output:
+<pre>    <id>1</id>
+    <name>Adam</name>
+    <id>1</id>
+    <name>Berta</name>
+</pre>
+Kommando:
+<pre>filter start=/<person/ end=!</person! Filters=;r"<(name)>(.?*)<";r"<id>(.?*)<" repeat=2 Templates=";%1%: %2%;no: %1%"
+</pre>
+In Puffer output:
+<pre>no: 1
+name: Adam
+no: 2
+name: Berta
+</pre>

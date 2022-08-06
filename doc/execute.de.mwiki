@@ -1,0 +1,29 @@
+Ausführen von Kommandos in einem Puffer.
+
+
+=== Parameter ===
+{| class="wikitable"
+! Name
+! Typ
+! Beschreibung
+! Beispiel
+|-
+| '''input'''
+| [[Deutsche-Dokumentation#parametertypen|bufferName]]
+| Pro Zeile steht hier ein Kommando. Diese werden der Reihe nach ausgeführt.
+| execute input=script
+|}
+
+=== Beispiel ===
+Im Puffer "script" steht:
+<pre>copy text=i~"%index%: Id: id%number% Name: %char%%char%%char%~n" output=template
+duplicate input=template count=3 offset=1 baseChar=A
+</pre>
+Kommando:
+<pre>execute input=script
+</pre>
+Danach steht in Puffer "output":
+<pre>0: Id: id1 Name: AAA
+1: Id: id2 Name: BBB
+2: Id: id3 Name: CCC
+</pre>

@@ -532,12 +532,12 @@ End:
       final regExp = RegExp(r'name: (\S+).*id: (\d+)');
       var info = SortInfo(
           logger, 'r', [SortRange(1, 1, true), SortRange(0, 0, false)],
-          regExpRelevant: regExp);
+          filter: regExp);
       expect(info.sort(lines),
           'name: charly id: 1\n*name: bob id: 8\nname: joe *id: 12');
       info = SortInfo(
           logger, 'r', [SortRange(0, 0, false), SortRange(1, 1, true)],
-          regExpRelevant: regExp);
+          filter: regExp);
       expect(info.sort(lines),
           '*name: bob id: 8\nname: charly id: 1\nname: joe *id: 12');
     });
@@ -563,13 +563,67 @@ End:
     });
     test('simple-numeric', () {
       butler.buffers['input'] = '10\n3\n2\n4\n1';
-      expect(butler.execute('sort how="cn"'), isNull);
+      expect(butler.execute('sort ranges="n"'), isNull);
       expect(butler.getBuffer('output'), '1\n2\n3\n4\n10');
     });
     test('word-two-ranges-numeric-and-alnum', () {
       butler.buffers['input'] = '10,joe,adm\n3,bob,adm\n2,charly,usr';
-      expect(butler.execute(r'sort how="wn1,2-3" sep=r/\s*,\s*/'), isNull);
+      expect(butler.execute(r'sort ranges="n1,2-3" sep=r/\s*,\s*/'), isNull);
       expect(butler.getBuffer('output'), '2,charly,usr\n3,bob,adm\n10,joe,adm');
+    });
+    test('sort-examples', () {
+      butler.buffers['data'] =
+          '''home: dirs: 122 hidden-dirs: 29 files: 38299 MBytes: 1203.042
+opt: dirs: 29 files: 1239 MBytes: 123.432
+data: dirs: 4988 files: 792374 MBytes: 542034.774''';
+      expect(
+          butler.execute(
+              r'sort input=data Filters=;r/MBytes: ([\d.]+)/;r/dirs: (\d+)/;r/files: (\d+)/ ranges="n1,n1,n1"'),
+          isNull);
+      expect(butler.getBuffer('output'),
+          '''opt: dirs: 29 files: 1239 MBytes: 123.432
+home: dirs: 122 hidden-dirs: 29 files: 38299 MBytes: 1203.042
+data: dirs: 4988 files: 792374 MBytes: 542034.774''');
+
+      butler.buffers['input'] = '''name: joe id: 3 year: 2016
+Name: bob shortname: BOB id: 12 year: 2021
+* name: charly id: 13 year: 2020''';
+      expect(
+          butler.execute(
+              r'sort ranges="1,n2-3" filter=R/name: (\w+) id: (\d+) year: (\d+)/'),
+          isNull);
+      expect(butler.getBuffer('output'),
+          '''Name: bob shortname: BOB id: 12 year: 2021
+* name: charly id: 13 year: 2020
+name: joe id: 3 year: 2016''');
+
+      butler.buffers['input'] = '1234abc89Aabc\n1234567890abc\n123XABC89Aabc';
+      expect(butler.execute(r'sort output=sorted ranges="1-4,8-10"'), isNull);
+      expect(butler.getBuffer('sorted'),
+          '1234567890abc\n1234abc89Aabc\n123XABC89Aabc');
+
+      butler.buffers['sorted'] =
+          'male,10,joe,adm\nmale,3,bob,adm\nfemale,2,charly,usr';
+      expect(
+          butler.execute(r'sort input=sorted ranges="3-4,n2,1" separator=","'),
+          isNull);
+      expect(butler.getBuffer('output'),
+          'male,3,bob,adm\nfemale,2,charly,usr\nmale,10,joe,adm');
+
+      butler.buffers['input'] =
+          'male, 10,joe , 101\nmale, 3,divers, bob,87\nfemale, 2, charly, 53';
+      expect(
+          butler.execute(r'sort ranges="3,n4,1" separator=r/\s*,\s*/'), isNull);
+      expect(butler.getBuffer('output'),
+          'female, 2, charly, 53\nmale, 3,divers, bob,87\nmale, 10,joe , 101');
+    });
+  });
+  group('TextButler-reverse', () {
+    final butler = TextButler();
+    test('simple', () {
+      butler.buffers['input'] = '1\n2\n3';
+      expect(butler.execute('reverse'), isNull);
+      expect(butler.getBuffer('output'), '3\n2\n1');
     });
   });
 }

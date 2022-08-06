@@ -1,0 +1,42 @@
+= Zielsetzung =
+Das Kommandozeilenprogramm '''text_slave''' "versteht" die gleichen Kommandos wie das GUI-Programm text_butler.
+Es dient zur Automatisierung mittels erstellter Scripts.
+
+== Anwendung ==
+Es gibt drei Arten, text_slave zu starten:
+<pre>text_slave --help
+# schreibt einen Hilfetext nach stdout (ins Terminal).
+</pre>
+<pre>text_slave
+# liest die Kommandos von stdin und schreibt den Puffer "output" nach stdout, nach Ausführen der Kommandos.
+</pre>
+<pre>text_slave FILE
+# liest die Kommandos aus der Datei "FILE" und schreibt den Puffer "output" nach stdout, nach Ausführen der Kommandos.
+</pre>
+
+== Beispiel ==
+Wir benutzen die Art "Lesen von stdin":
+<pre>text_slave <<'EOS'
+# load the settings into buffer "data":
+load file="/etc/php/7.3/php.ini" output=data
+# load the search expression of the interesting settings into buffer "regexpr":
+copy text="^(memory_limit|upload_max_filesize|max_file_uploads|post_max_size|"
+copy text="max_execution_time|max_input_time|default_socket_timeout)" output=regexpr append
+copy text=i~"== previous values~n"
+# log the current data of some variables (settings):
+filter input=data append filter=i~"~[regexpr]"
+# replace some settings:
+replace input=data output=data What=;r/^(memory_limit\s*=\s*).*$/;"%group1%2048M"
+replace input=data output=data What=;r/^(upload_max_filesize\s*=\s*).*$/;"%group1%512M"
+replace input=data output=data What=;r/^(max_file_uploads\s*=\s*).*$/;"%group1%100"
+replace input=data output=data What=;r/^(max_execution_time\s*=\s*).*$/;"%group1%600"
+replace input=data output=data What=;/^(max_input_time\s*=\s*).*$/;"%group1%600"
+replace input=data output=data What=;r/^(default_socket_timeout\s*=\s*).*$/;"%group1%600"
+copy text=i~"~n== current values~n" output=mylog append
+# log the current settings:
+filter input=data append filter=ri~"~[regexpr]"
+store file="/etc/php/7.3/php.ini" input=data
+EOS
+</pre>
+'''Hinweis''': Die Daten, die im Puffer "output" gesammelt werden, werden automatisch nach Ausführen der Kommandos
+nach stdout (also ins Terminal) ausgegeben.

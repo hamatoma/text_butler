@@ -1,0 +1,32 @@
+Reverses the order of the lines.
+
+=== Parameters ===
+{| class="wikitable"
+! Surname
+! Type
+! description
+! example
+|-
+| '''input'''
+| [[English-Documentation#parametertypes|bufferName]]
+| source buffer. Default: '''input'''
+| input=history
+|-
+| '''output'''
+| [[English-Documentation#parametertypes|bufferName]]
+| destination buffer. Default: '''output'''
+| output=data
+|}
+
+=== Example ===
+The birthdays buffer contains:
+<pre>3.1 Charlie
+9.8 Ada
+4.12 Bob
+</pre>
+* Command <code>reverse inp=birtdays</code>
+Then the output says:
+<pre>4.12 Bob
+9.8 Ada
+3.1 Charlie
+</pre>

@@ -1,0 +1,95 @@
+Sortieren von Zeilen nach verschiedenen Kriterien.
+
+* Die Bereiche, die für die Sortierung relevant sind, können Zeichenbereiche (von Zeichen x bis Zeichen y) oder wortbasiert (von Wort x bis Wort y) sein oder reguläre Ausdrücke sein.
+* Die Worttrenner können definiert werden.
+* Es können mehrere Bereiche definiert werden.
+* Ein Bereich kann als "numerisch" gekennzeichnet werden: Dann erfolgt die Sortierung nach dem Zahlwert, nicht alphanumerisch. Zahlen können Ganzzahlen oder Gleitpunktzahlen sein.
+
+=== Parameter ===
+
+{| class="wikitable"
+! Name
+! Typ
+! Beschreibung
+! Beispiel
+|-
+| '''input'''
+| [[Deutsche-Dokumentation#parametertypen|bufferName]]
+| Der Text aus diesem Puffer wird untersucht. Voreinstellung: input
+| <code>input=data</code>
+|-
+| '''output'''
+| [[Deutsche-Dokumentation#parametertypen|bufferName]]
+| das Ergebnis wird in diesen Puffer geschrieben. Voreinstellung: output
+| <code>output=result</code>
+|-
+| '''type'''
+| [[Deutsche-Dokumentation#parametertypen|string]]
+| Typ des Bereichs: char word regexpr Voreinstellung: char
+| <code>type=word</code>
+|-
+| '''ranges'''
+| [[Deutsche-Dokumentation#parametertypen|string]]
+| Syntax: ['n']start[-end] Ein Bereich besteht aus einem Startwert und evt. einem Endwert, der mit '-' getrennt wird. Der Bereich kann  mit 'n' beginnen, dann ist er numerisch. Es können mehrere Bereiche angegeben werden, Trenner ist ','. Start- und Endwerte beginnen mit 1 für den ersten Wert. Der Endwert ist inklusiv. Ist kein Endwert angegeben, ist der Startwert auch der Endwert.
+| <code>n3,n4-5,1</code><br/>
+|-
+| '''filter'''
+| [[Deutsche-Dokumentation#parametertypen|pattern]]
+| Ein regulärer Ausdruck, der Suchbereiche definiert. Die suchrelevanten Zeichenketten werden als Gruppen (mit '(' und ')' eingeschlosson) definiert. Dieser Parameter setzt automatisch den Typ auf "regexpr".
+| <code>filter=r/name: (\w+).*id: (\d+).*role: (\w+)/</code>
+|-
+| '''Filters'''
+| [[Deutsche-Dokumentation#parametertypen|patternList]]
+| Eine Liste mit regulärer Ausdruck, der Suchbereiche definiert. Die suchrelevanten Zeichenketten werden als Gruppe (mit '(' und ')' eingeschlosson) definiert. Dieser Parameter setzt automatisch den Typ auf "regexpr".
+| <code>Filters=;r/id: (\d+)r/;r/name: (\w+)/;r/role: (\w+)/</code>
+|-
+| '''separator'''
+| [[English-Documentation#parametertypes|pattern]]
+| Ein Suchmuster (String oder regulärer Ausdruck), das die Worte voneinander trennt. Die suchrelevanten Zeichenketten werden durch Gruppen (umrahmt von '(' und ')') definiert. Dieser Parameter setzt automatisch den Typ auf "word". Default: Leerzeichen und Tabulatoren: <code>r/\s+/</code>
+| <code>sep=","</code><br><code>sep=r/[,;]/</code>
+|}
+
+=== Beispiele ===
+==== Beispiel 1: Sortieren einer CSV-Datei ====
+Im Puffer csv steht:
+<pre>Joe,1,user
+Bob,2,adm
+Charly,11,user
+</pre>
+Kommando:
+<pre>sort input=csv type=word ranges=3,n2,1 separator=","
+reverse input=output output=csv
+</pre>
+Im Ergebnispuffer output (Voreinstellung) steht:
+<pre>Bob,2,adm
+Joe,1,user
+Charly,11,user
+</pre>
+==== Beispiel 2: Sortieren einer Dateistatistik mit einem regulären Ausdruck ====
+Im Puffer data steht:
+<pre>home: dirs: 122 hidden-dirs: 29 files: 38299 MBytes: 1203.042
+opt: dirs: 29 files: 1239 MBytes: 123.432
+data: dirs: 4988 files: 792374 MBytes: 542034.774
+</pre>
+Kommando:
+<pre>sort input=data filter=r/dirs: (\d+).*files: (\d+).*MBytes: (\S+)/ ranges=n2,n3
+</pre>
+Im Ergebnispuffer output (Voreinstellung) steht, nach Datenmenge sortiert:
+<pre>data: dirs: 4988 files: 792374 MBytes: 542034.774
+home: dirs: 122 hidden-dirs: 29 files: 38299 MBytes: 1203.042
+opt: dirs: 29 files: 1239 MBytes: 123.432
+</pre>
+==== Beispiel 3: Sortieren einer Dateistatistik mit einer Liste von regulären Ausdrücken ====
+Im Puffer data steht:
+<pre>home: dirs: 122 hidden-dirs: 29 files: 38299 MBytes: 1203.042
+opt: dirs: 29 files: 1239 MBytes: 123.432
+data: dirs: 4988 files: 792374 MBytes: 542034.774
+</pre>
+Kommando:
+<pre>sort input=data Filters=;r/MBytes: ([\d.]+)/;r/dirs: (\d+)/;r/files: (\d+)/ ranges="n1,n1,n1"
+</pre>
+Im Ergebnispuffer output (Voreinstellung) steht, nach Datenmenge sortiert:
+<pre>data: dirs: 4988 files: 792374 MBytes: 542034.774
+home: dirs: 122 hidden-dirs: 29 files: 38299 MBytes: 1203.042
+opt: dirs: 29 files: 1239 MBytes: 123.432
+</pre>

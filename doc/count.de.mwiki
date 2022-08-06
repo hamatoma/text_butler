@@ -1,0 +1,60 @@
+Zählt das Vorkommen eines Suchmusters in einem Puffer.
+
+=== Parameter ===
+
+{| class="wikitable"
+! Name
+! Typ
+! Beschreibung
+! Beispiel
+|-
+| '''append'''
+| [[Deutsche-Dokumentation#parametertypen|bool]]
+| Das Ergebnis wird im Zielpuffer angehängt.
+| append
+|-
+| '''input'''
+| [[Deutsche-Dokumentation#parametertypen|bufferName]]
+| In diesem Puffer wird gezählt. Voreinstellung: input
+| input=adresses
+|-
+| '''output'''
+| [[Deutsche-Dokumentation#parametertypen|bufferName]]
+| Das Ergebnis wir in diesen Puffer geschrieben. Voreinstellung: output
+| output=result
+|-
+| '''marker'''
+| [[Deutsche-Dokumentation#parametertypen|character]]
+| Definiert einen Platzhalter für die Ergebniszahl in '''template'''. Voreinstellung: '#'
+| marker=*
+|-
+| '''template'''
+| [[Deutsche-Dokumentation#parametertypen|string]]
+| Vorlage, wie die Ergebnismeldung aussieht. Muss '''marker''' enthalten. Voreinstellung: der Wert von '''marker'''
+| template="# hits: *"
+|-
+| '''what'''
+| [[Deutsche-Dokumentation#parametertypen|pattern]]
+| Suchmuster: String (auch interpoliert) oder regulärer Ausdruck
+| what="address"<br>what=r/\d+/
+|}
+
+=== Beispiele ===
+Im Puffer "input" steht:
+<pre>Be or not to be, that's the question!
+Hic Rhodos, Hic salta!
+</pre>
+Kommando:
+<pre>count what="e"
+</pre>
+Danach steht in "output":
+<pre>4
+</pre>
+Kommandos:
+<pre>count what=r/\S+/ template="# Wörter" output=statistic
+count regexpr=r/[.;!?]/ t=', # Sätze' o=statistic append
+count regexpr=r/./ t=', # Zeichen' o=statistic append
+</pre>
+Danach steht im Puffer "statistic":
+<pre>12 Wörter, 2 Sätze, 59 Zeichen
+</pre>

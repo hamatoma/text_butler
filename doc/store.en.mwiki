@@ -1,0 +1,33 @@
+=== Parameters ===
+{| class="wikitable"
+! Surname
+! Type
+! description
+! example
+|-
+| '''append'''
+| [[English-Documentation#parametertypes|bool]]
+| The buffer content is appended to the file.
+| append
+|-
+| '''file'''
+| [[English-Documentation#parametertypes|string]]
+| File to save to.
+| file="addresses.txt"
+|-
+| '''input'''
+| [[English-Documentation#parametertypes|bufferName]]
+| The content of this buffer is written to the file. Default: output
+| input=result
+|}
+
+=== Example ===
+The "data" buffer contains:
+<pre>Hello world
+</pre>
+Command:
+<pre>store file="data.txt" input=data
+</pre>
+Then the file "data.txt" says:
+<pre>Hello world
+</pre>

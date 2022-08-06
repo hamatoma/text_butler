@@ -1,0 +1,20 @@
+== clear ==
+Der Pufferinhalt wird gelöscht. Existiert der Puffer noch nicht, wird er angelegt (leer).
+
+=== Parameter ===
+{| class="wikitable"
+! Name
+! Typ
+! Beschreibung
+! Beispiel
+|-
+| '''output'''
+| [[Deutsche-Dokumentation#parametertypen|bufferName]]
+| Das Ergebnis wir in diesen Puffer geschrieben. Voreinstellung: output
+| output=result
+|}
+
+=== Beispiel ===
+<pre>clear o=history
+</pre>
+Danach ist die Historie leer.

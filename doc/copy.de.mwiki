@@ -1,0 +1,49 @@
+=== Parameter ===
+{| class="wikitable"
+! Name
+! Typ
+! Beschreibung
+! Beispiel
+|-
+| '''append'''
+| [[Deutsche-Dokumentation#parametertypen|bool]]
+| Das Ergebnis wird im Zielpuffer angehängt
+| append
+|-
+| '''input'''
+| [[Deutsche-Dokumentation#parametertypen|bufferName]]
+| Puffer, der kopiert wird. Voreinstellung: input
+| input=examples
+|-
+| '''output'''
+| [[Deutsche-Dokumentation#parametertypen|bufferName]]
+| Das Ergebnis wird in diesen Puffer geschrieben. Voreinstellung: output
+| output=result
+|-
+| '''text'''
+| [[Deutsche-Dokumentation#parametertypen|string]]
+| Kann alternativ zu '''input''' angegeben werden. Dann wird dieser Text ins Ziel kopiert.
+Kann auch ein '''interpolierter Text''' sein, dann steht vor dem Delimiter i und das Esc-Zeichen.
+| text="Hello" text=i%"First line%nSecond line"
+|}
+
+=== Beispiele ===
+Im Puffer "input" steht:
+<pre>Hello World
+</pre>
+Im Puffer "todo" steht:
+<pre>Greetings
+</pre>
+Kommando:
+<pre>copy out=todo append
+</pre>
+Danach steht in "todo"
+<pre>Greetings
+Hello World
+</pre>
+Kommando:
+<pre>copy text="Hi Jonny!"
+</pre>
+Danach steht in Puffer "output":
+<pre>Hi Jonny!
+</pre>

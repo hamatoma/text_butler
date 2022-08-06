@@ -1,0 +1,118 @@
+This can be used to replace search patterns. Strings or regular expressions can be used as search patterns.
+With one command, many search patterns can be provided with different values ​​at once.
+
+With regular search patterns, part of the hit can be used in the replacement.
+
+=== Parameters ===
+
+{| class="wikitable"
+! Surname
+! Type
+! Description
+! Example
+|-
+| '''append'''
+| [[English-Documentation#parametertypes|bool]]
+| the result is appended in the destination buffer
+| <code>app</code>
+|-
+| '''input'''
+| [[English-Documentation#parametertypes|bufferName]]
+| The text from this buffer is examined. Default: input
+| <code>input=data</code>
+|-
+| '''output'''
+| [[English-Documentation#parametertypes|bufferName]]
+| the result is written to this buffer. Default: output
+| <code>output=result</code>
+|-
+| '''meta'''
+| [[English-Documentation#parametertypes|character]]
+| Delimiters for the references within the replacement pattern (groups). Default: %
+| <code>meta=%</code>
+|-
+| '''What'''
+| [[English-Documentation#parametertypes|patternList]]
+| A list with alternating search pattern and replacement value, starting with Separator (Autoseparator).<br/>Pattern is a regular expression, a regular string, or a case-insensitive string.
+| <code>What=|":id"|"19429"|":date"|"2021-06-27"</code><br/><code>What=;r/<(name|id)>(.*?)</(name|id)>/;"%group1%: %group2%";"<br/>";""</code>
+|}
+=== References for Substitute Values ​​===
+References to the search pattern can be specified for the substitute value:
+* For normal strings and regular expressions: %group0% (or %0% for short), meaning the search string.
+* Regular expressions only: %groupN% (or %N% for short). N stands for a number (1, 2, ...) and references the match of the Nth bracket in the search expression.
+* The delimiter of the groups (in the example "%") can be redefined with the parameter '''meta'''.
+'''Example''' with normal string:
+<pre>
+What=;"Long sentence with many words.";"%0 %0 %0"
+</pre>
+Here each hit found is repeated three times.
+<hr>
+'''Example''' with regular expressions:
+<pre>
+What=;r/<(name|id)>(.*?)</(name|id)>/;"%group1%: %group2%";R/<br/?>/;""
+</pre>
+Description of the search terms:
+* Search <code>'<'</code> followed by "name" or "id" (defined as group 1 because first bracket), followed by <code>'">"</code> followed by anything String without the following expression (because of the "*?") (defined as group 2 because of the 2nd bracket), followed by <code>"<" and "/"</code>, followed by "name" or " id" (defined as group 3, since the 3rd bracket).
+* Replace the pattern above with the first group (i.e. "name" or "id").
+* Search for <code>"<br"</code> followed by "/" or not (because of the '?') followed by ">".
+* Replace this pattern with nothing (there is nothing between the separator ";" and the end of the string ".
+The buffer in which the replacement takes place says:
+<pre>
+<name>Adam</name></br>
+<id>27</name><br>
+</pre>
+The result buffer then contains:
+<pre>
+name: Adam
+ID: 27
+</pre>
+
+=== Examples ===
+==== Example 1: Replacing named parameters in SQL statement ====
+The sql buffer contains:
+<pre>
+SELECT
+  bill_no,
+  (SELECT sum(price) FROM billitems bi
+    WHERE bb.billitem_bill=bi.bill_id
+      AND billitem_date = :date
+  ) as price_sum
+FROM bill bb
+WHERE
+  bb.bill_name like :name AND bill_created = :date
+;
+</pre>
+Command:
+<pre>
+replace What=;/:name/;'Miller';/:date/;"'2021-06-02'" input=sql
+</pre>
+The result buffer output (default setting) contains:
+<pre>
+SELECT
+  bill_no,
+  (SELECT sum(price) FROM billitems bi
+    WHERE bb.billitem_bill=bi.bill_id
+      AND billitem_date = '2021-06-02'
+  ) as price_sum
+FROM bill bb
+WHERE
+  bb.bill_name like 'Miller' AND bill_created = '2021-06-02'
+;
+</pre>
+==== Example 2: Swapping columns in a CSV file ====
+The input buffer contains:
+<pre>
+name;id;year
+Adam;10;1970
+Berta;11;2003
+</pre>
+Command:
+<pre>
+replace What=|r/(.*?);(.*?);(.*)/|"%2%;%3%;%1%"
+</pre>
+The result buffer output (default setting) contains:
+<pre>
+id;year;name
+10;1970;Adam
+11;2003;Berta
+</pre>

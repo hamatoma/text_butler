@@ -1,0 +1,33 @@
+=== Parameter ===
+{| class="wikitable"
+! Name
+! Typ
+! Beschreibung
+! Beispiel
+|-
+| '''append'''
+| [[Deutsche-Dokumentation#parametertypen|bool]]
+| Der Dateiinhalt wird im Zielpuffer angehängt
+| append
+|-
+| '''file'''
+| [[Deutsche-Dokumentation#parametertypen|string]]
+| Datei, aus der der Inhalt geholt wird.
+| file="addresses.txt"
+|-
+| '''output'''
+| [[Deutsche-Dokumentation#parametertypen|bufferName]]
+| In diesen Puffer wird der Dateiinhalt abgelegt. Voreinstellung: input
+| output=result
+|}
+
+=== Beispiel ===
+Im Datei "data.txt" steht:
+<pre>Hello World
+</pre>
+Kommando:
+<pre>load file="data.txt"
+</pre>
+Danach steht in "input"
+<pre>Hello World
+</pre>

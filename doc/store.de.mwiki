@@ -1,0 +1,33 @@
+=== Parameter ===
+{| class="wikitable"
+! Name
+! Typ
+! Beschreibung
+! Beispiel
+|-
+| '''append'''
+| [[Deutsche-Dokumentation#parametertypen|bool]]
+| Der Pufferinhalt wird an die Datei angehängt.
+| append
+|-
+| '''file'''
+| [[Deutsche-Dokumentation#parametertypen|string]]
+| Datei, in die gespeichert wird.
+| file="addresses.txt"
+|-
+| '''input'''
+| [[Deutsche-Dokumentation#parametertypen|bufferName]]
+| Der Inhalt dieses Puffers wird in die Datei geschrieben. Voreinstellung: output
+| input=result
+|}
+
+=== Beispiel ===
+Im Puffer "data" steht:
+<pre>Hello World
+</pre>
+Kommando:
+<pre>store file="data.txt" input=data
+</pre>
+Danach steht in der Datei "data.txt":
+<pre>Hello World
+</pre>

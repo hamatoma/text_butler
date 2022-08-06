@@ -1,0 +1,35 @@
+Swapping the contents of two buffers.
+
+=== Parameters ===
+{| class="wikitable"
+! Name
+! Type
+! Description
+! Example
+|-
+| '''a'''
+| [[English-Documentation#parametertypes|bufferName]]
+| First exchange buffer.
+| a=result
+|-
+| '''b'''
+| [[English-Documentation#parametertypes|bufferName]]
+| Second exchange buffer.
+| b=input
+|}
+If no parameter is specified, buffer input and output are swapped.
+
+=== Example ===
+The input buffer contains:
+<pre>Write email
+</pre>
+The todo buffer says:
+<pre>Listen podcast
+</pre>
+* Command <code>swap a=input b=todo</code>
+Then it says in input:
+<pre>Listen podcast
+</pre>
+and in todo:
+<pre>Write email
+</pre>

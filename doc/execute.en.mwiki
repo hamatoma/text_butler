@@ -1,0 +1,29 @@
+Executing commands in a buffer.
+
+
+=== Parameters ===
+{| class="wikitable"
+! Name
+! Type
+! Description
+! Example
+|-
+| '''input'''
+| [[English Documentation#parametertypes|bufferName]]
+| There is one command per line. These are executed in order.
+| execute input=script
+|}
+
+=== Example ===
+In the "script" buffer there is:
+<pre>copy text=i~"%index%: Id: id%number% Name: %char%%char%%char%~n" output=template
+duplicate input=template count=3 offset=1 baseChar=A
+</pre>
+Command:
+<pre>execute input=script
+</pre>
+Then the "output" buffer says:
+<pre>0: Id: id1 Name: AAA
+1: Id: id2 Name: BBB
+2: Id: id3 Name: CCC
+</pre>

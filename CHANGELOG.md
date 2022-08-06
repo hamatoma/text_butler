@@ -1,8 +1,9 @@
 ## [0.4.0] - 2022.08.06
 
-new command: sort
+new commands: sort reverse
 * package lints replaces pedantic, additional warnings removed   
-* new deployment directory website\
+* new deployment to a website: InstallWebsite.sh B
+* log() adds at the top of the buffer
 
 ## [0.3.3] - 2021.07.13
 

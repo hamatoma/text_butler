@@ -1,0 +1,120 @@
+Damit können Suchmuster ersetzt werden. Als Suchmuster sind Strings oder reguläre Ausdrücke möglich.
+Mit einem Kommando können viele Suchmuster auf einmal mit jeweils anderm Wert versehen werden.
+
+Bei regulären Suchmustern kann ein Teil des Treffers im Ersatz verwendet werden.
+
+=== Parameter ===
+
+{| class="wikitable"
+! Name
+! Typ
+! Beschreibung
+! Beispiel
+|-
+| '''append'''
+| [[Deutsche-Dokumentation#parametertypen|bool]]
+| das Ergebnis wird im Zielpuffer angehängt
+| <code>app</code>
+|-
+| '''input'''
+| [[Deutsche-Dokumentation#parametertypen|bufferName]]
+| Der Text aus diesem Puffer wird untersucht. Voreinstellung: input
+| <code>input=data</code>
+|-
+| '''output'''
+| [[Deutsche-Dokumentation#parametertypen|bufferName]]
+| das Ergebnis wird in diesen Puffer geschrieben. Voreinstellung: output
+| <code>output=result</code>
+|-
+| '''meta'''
+| [[Deutsche-Dokumentation#parametertypen|character]]
+| Delimiter für die Referenzen innerhalb von des Ersatzmusters (Gruppen). Voreinstellung: %
+| <code>meta=%</code>
+|-
+| '''What'''
+| [[Deutsche-Dokumentation#parametertypen|patternList]]
+| Eine Liste mit abwechselnd Suchmuster und Ersatzwert, beginnend mit Separator (Autoseparator).
+Suchmuster ist ein regulärer Ausdruck, ein normaler String oder ein String ohne Berücksichtigung von Groß-/Kleinschreibung.
+| <code>What=|":id"|"19429"|":date"|"2021-06-27"</code><br/>
+<code>What=;r/<(name|id)>(.*?)</(name|id)>/;"%group1%: %group2%";"<br/>";""</code>
+|}
+=== Referenzen bei Ersatzwerten ===
+Es können Referenzen auf das Suchmuster beim Ersatzwert angegeben werden:
+* Bei normalen Strings und regulären Ausdrücken: %group0% (oder abgekürzt %0%), damit ist der Suchstring gemeint.
+* Nur bei regulären Ausdrücken: %groupN% (oder abgekürzt %N%). N steht für eine Zahl (1, 2, ...) und referenziert den Treffer der N-ten Klammer im Suchausdruck.
+* Der Delimiter der Gruppen (im Beispiel "%") kann mit dem Parameter '''meta''' umdefiniert werden.
+'''Beispiel''' mit normalem String:
+<pre>
+What=;"Long sentence with many words.";"%0 %0 %0"
+</pre>
+Hier wird jeder gefundene Treffer drei mal wiederholt.
+<hr>
+'''Beispiel''' mit regulären Ausdrücken:
+<pre>
+What=;r/<(name|id)>(.*?)</(name|id)>/;"%group1%: %group2%";R/<br/?>/;""
+</pre>
+Beschreibung der Suchausdrücke:
+* Suche <code>'<'</code>, gefolgt von "name" oder "id" (definiert als Gruppe 1, da erste Klammer), gefolgt von <code>'">"</code>, gefolgt von beliebigem String ohne den nachfolgenden Ausdruck (wegen des "*?") (definiert als Gruppe 2, da 2.te Klammer), gefolgt von <code>"<" und "/"</code>, gefolgt von "name" oder "id" (definiert als Gruppe 3, da 3.te Klammer).
+* Ersetze das obige Muster durch die die ersten Gruppe (also "name" oder "id").
+* Suche <code>"<br"</code>, gefolgt von "/" oder auch nicht (wegen des '?'), gefolgt von ">".
+* Ersetze dieses Muster durch nichts (zwischen Separator ";" und dem Stringende " steht nichts.
+Im Puffer, in dem ersetzt wird, steht:
+<pre>
+<name>Adam</name></br>
+<id>27</name><br>
+</pre>
+Im Ergebnispuffer steht dann:
+<pre>
+name: Adam
+id: 27
+</pre>
+
+=== Beispiele ===
+==== Beispiel 1: Ersetzen der benannten Parameter in SQL-Statement ====
+Im Puffer sql steht:
+<pre>
+SELECT
+  bill_no,
+  (SELECT sum(price) FROM billitems bi
+    WHERE bb.billitem_bill=bi.bill_id
+      AND billitem_date = :date
+  ) as price_sum
+FROM bill bb
+WHERE
+  bb.bill_name like :name AND bill_created = :date
+;
+</pre>
+Kommando:
+<pre>
+replace What=;/:name/;'Miller';/:date/;"'2021-06-02'" input=sql
+</pre>
+Im Ergebnispuffer output (Voreinstellung) steht:
+<pre>
+SELECT
+  bill_no,
+  (SELECT sum(price) FROM billitems bi
+    WHERE bb.billitem_bill=bi.bill_id
+      AND billitem_date = '2021-06-02'
+  ) as price_sum
+FROM bill bb
+WHERE
+  bb.bill_name like 'Miller' AND bill_created = '2021-06-02'
+;
+</pre>
+==== Beispiel 2: Vertauschen von Spalten in einer CSV-Datei ====
+Im Puffer input steht:
+<pre>
+name;id;year
+Adam;10;1970
+Berta;11;2003
+</pre>
+Kommando:
+<pre>
+replace What=|r/(.*?);(.*?);(.*)/|"%2%;%3%;%1%"
+</pre>
+Im Ergebnispuffer output (Voreinstellung) steht:
+<pre>
+id;year;name
+10;1970;Adam
+11;2003;Berta
+</pre>

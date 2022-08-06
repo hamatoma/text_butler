@@ -1,0 +1,37 @@
+Gibt Informationen über interne Strukturen aus.
+
+=== Parameter ===
+
+{| class="wikitable"
+! Name
+! Typ
+! Beschreibung
+! Beispiel
+|-
+| '''append'''
+| [[Deutsche-Dokumentation#parametertypen|bool]]
+| Das Ergebnis wird im Zielpuffer angehängt.
+| append
+|-
+| '''output'''
+| [[Deutsche-Dokumentation#parametertypen|bufferName]]
+| das Ergebnis wird in diesen Puffer geschrieben. Voreinstellung: output
+| output=result
+|-
+| '''what'''
+| [[Deutsche-Dokumentation#parametertypen|string]] (ohne Delimiter)
+| Spezifiziert, was ausgegeben werden soll. Möglich sind: buffers Voreinstellung: buffers
+| what=buffers
+|}
+
+=== Beispiel ===
+Kommando:
+<pre>show what=buffers
+</pre>
+Danach steht im Puffer "output":
+<pre>examples
+history
+input
+output
+log
+</pre>

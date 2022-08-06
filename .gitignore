@@ -51,3 +51,4 @@ web/
 .metadata
 /Prepare
 coverage/
+/Deploy

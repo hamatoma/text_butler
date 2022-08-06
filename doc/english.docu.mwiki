@@ -1,0 +1,183 @@
+= Overview =
+* [[clear]] A buffer can be cleared. If the buffer does not yet exist, it will be created.
+* [[copy]] Copies one buffer into another, or a given text into a buffer.
+* [[count]] Counts the occurrences of a search pattern in a buffer.
+* [[duplicate]] "Duplicate" a text, whereby consecutive numbers, consecutive character strings or specified individual values can be contained with placeholders.
+* [[execute]] Execute commands in a buffer.
+* [[filter]] Patterns are used to specify the parts of the input that should appear in the output.
+* [[load]] Load a buffer with a file content.
+* [[replace]] This can be used to replace search patterns. Strings or regular expressions can be used as search patterns.
+* [[reverse]] Sort the rows in reverse order.
+* [[show]] Prints information about internal structures.
+* [[sort]] Sort row by row.
+* [[store]] Store a buffer to a file.
+* [[swap]] Swaps the contents of two buffers.
+
+= Objective =
+The Textbutler is a flutter app. This allows the "conversion of text", whereby a
+'''Input text''' is converted into a '''Output text''', but also "information" about a text.
+
+As a conversion there is:
+* "Multiplication": a text appears several times, with parts changing, for example a sequential number.
+* Filtering: By specifying a search pattern, only parts of the template are accepted
+* Deletions: Specifying a search pattern removes parts of the template
+* Substitutions: Parts are changed by specifying a search pattern and a replacement. References to the hit location can be contained in the replacement text.
+* Sorting: Sorting according to different specifications
+* Reversion: Sort in reverse order
+
+The information is:
+* The number of a search pattern
+
+= Structure (syntax) =
+The actions are specified with "commands" in an input line. Every command has parameters.
+
+The program manages any number of text buffers, which are marked with names.
+There are predefined buffers:
+* input: is used by default as a template for the conversion.
+* output: is used as the target of the conversion by default.
+* history: the commands are stored there. Incorrect commands are marked with a leading "#".
+* examples: there is at least one example for each command, the most important parameters are listed.
+* log: If inconsistencies occur during processing, the messages are output here.
+
+The program offers four text areas, for each area you can use a combo box to determine which buffer is displayed there. Each buffer can only be displayed once. If you set a buffer that already has another display, another buffer that has not yet been displayed is assigned to this display.
+
+== Abbreviation of command names and parameter names ==
+Commands can be shortened as long as the input is clear, as can the parameters:
+For example, there are the commands "clear", "copy" and "count". So "cl" is unique, or "cop" or "cou", but not "c" or "co".
+
+== Commands ==
+
+Commands consist of the '''command name''' and '''parameters''' which start with
+<code>parameter=value</code> must be specified, except for boolean parameters,
+there is no "assignment". The order of the parameters is irrelevant.
+
+'''Convention''' for '''Plural parameters''': If there is a singular and plural parameter, the plural parameter is '''capitalised''': Example: '''value''' and '''Values'''. Reason: This means that both names can be greatly abbreviated.
+
+Parameters with texts need '''Delimiters'''. Any character except letters and digits can be used as a delimiter, it is only important that the selected delimiter is placed in front of and behind the string.
+Valid examples are <code>regexpr=!<a href="#">(.*?)</a>!</code>, <code>what="super"</code>
+or <code>text=?Delimiters are " or '?</code>.
+
+== Interpolated texts ==
+There are also '''interpolated''' texts: These are marked with an 'i' and an ESC character in front of the delimiter.
+
+'''Example:'''
+<pre>
+text=i&"Name: joe&nId: 101&n"
+</pre>
+
+In interpolated texts, meta-constructs such as line breaks, tabs... can appear:
+These are written with the ESC character and an identifier.
+In the following, the ESC symbol & is used:
+* &n is a newline
+* &t is a tab
+* &r is a "carriage return"
+* &v is a vertical tab
+* &f is a FormFeed (page break)
+* <code>&<bufferName></code> is the content of the buffer "bufferName"
+* '''Note:''' The special form <code>&[bufferName]type</code>" can be used for string lists. Description below.
+
+== Strings without delimiters ==
+There are strings that do not need a delimiter because they are one character long or cannot contain blanks (buffer names).
+
+'''Example:'''
+<pre>
+input=script
+</pre>
+
+== String lists, auto separator ==
+Parameters '''with lists''' need a separator that separates the list elements. If the list contains text, an '''auto-separator''' is used: this is the first character of the list.
+
+'''Example:'''
+<pre>
+Values=;"a";i~/"Hi~n/;'/home/bin'</code>.
+</pre>
+Here a list with three texts is defined, the first text has as delimiter ", the second is an interpreted text with meta character ~ and delimiter "/", the third uses as delimiter '.
+
+Auto separators have the advantage over fixed separators that conflicts with the rest of the text can be avoided.
+
+== String lists with interpreted text ==
+A string list can also be expressed with an interpreted string. The content of the list is then fetched from a buffer:
+* <code>i&"&[bufferName]type</code>&" The content of buffer "bufferName" is inserted as a list, where "type" specifies how the content is separated into list elements. "type" can be:
+    * '''line''' Each line is a list element
+    * '''sentence''' The list items are separated by blank lines
+* Multiple use of the pattern is possible, i.e. assembling the list from several buffers.
+* Mixing with constant list elements and list elements from buffers is possible.
+
+'''Example:'''
+<pre>
+Values=;"header";i%"%[data]line%";"footer"
+</pre>
+Buffer "data" contains:
+<pre>
+Johnny
+Eve
+</pre>
+The list then contains the elements:
+<pre>
+headers
+Johnny
+Eve
+footer
+</pre>
+
+== Regular Expressions ==
+A regular expression is syntactically a string prefixed with 'r' (case-sensitive) or 'R' (case-insensitive).
+
+Of course, a regular expression only makes sense for search patterns.
+
+'''Examples'''
+<pre>
+# Simple search string for decimals:
+what=r/(\d+)/
+# list of search strings, finds "<name>" and "<id>" and "<BR/>> and "<br/> ...
+What=;r/<(name|id)>/;R"<br/?>"
+</pre>
+
+A mixture with interpreted texts is possible, then <code>ri<Esc></code> or <code>Ri<Esc></code> is placed in front of the delimiter:
+<pre>
+what=Ri&/###&<name>&\d+/
+</pre>
+Here it searches for "###" followed by the contents of the buffer "name" followed by a decimal number, case insensitive.
+
+== Parameter Types ==
+{| class="wikitable"
+! Surname
+! description
+! examples
+|-
+| '''bool'''
+| realtime value. No value is required for this. The "value" is created when the parameter is specified with type bool (without '=').
+|
+|-
+| '''bufferName'''
+| Name of a buffer. Without delimiters. Only letters, digits and '_'.
+| <code>input</code> <code>ScriptSQL</code>
+|-
+| '''character'''
+| exactly one character. Without delimiters.
+| <code>%</code> <code>~</code>
+|-
+| '''nat'''
+| "natural" number, that is a non negative integer.
+| <code>0</code> <code>3299</code>
+|-
+| '''natList'''
+| List of natural numbers, separator is comma ',', so no autoseparator.
+| <code>3,9,2,44</code>
+|-
+| '''pattern'''
+| Match pattern: either a string, a case-insensitive string, a regular expression. Each of these subtypes may be interpolating.
+| <code>"simple string"</code> <code>I/case insensitive string/</code> <code>i~"one~ntwo~n"</code> <code>r![rR]eg( ular)? [eE]xpr!</code>
+|-
+| '''patternList'''
+| List of search patterns, with autoseparator.
+| <code>;r/[Rr]eg[eE]xp/;I/name/;"Adam"</code>
+|-
+| '''string'''
+| String with delimiters, also interpolated.
+| <code>"Adam"</code> <code>i~'1~n2'</code>
+|-
+| '''stringList'''
+| List of strings, with autoseparator.
+| <code>;"Adam";!"Adam" and "Eve"!</code>
+|}
