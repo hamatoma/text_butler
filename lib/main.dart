@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'app.dart';
 
-const VERSION = '0.3.3';
+const butlerVersion = '0.4.0';
 void main() {
   runApp(MyApp());
 }
@@ -24,7 +24,7 @@ class MyApp extends StatelessWidget {
         // is not restarted.
         primarySwatch: Colors.blue,
       ),
-      home: MyHomePage(title: 'TextButler $VERSION'),
+      home: MyHomePage(title: 'TextButler $butlerVersion'),
     );
   }
 }

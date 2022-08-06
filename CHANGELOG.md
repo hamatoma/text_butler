@@ -1,3 +1,9 @@
+## [0.4.0] - 2022.08.06
+
+new command: sort
+* package lints replaces pedantic, additional warnings removed   
+* new deployment directory website\
+
 ## [0.3.3] - 2021.07.13
 
 more tests

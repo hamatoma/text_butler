@@ -89,7 +89,7 @@ void main() {
         butler.expandParameter('va', names2);
         expect('missing WordingError', isNull);
       } on WordingError catch (exc) {
-        expect(exc.message, 'ambiguous parameter "va": value/variable');
+        expect(exc.theMessage, 'ambiguous parameter "va": value/variable');
       }
     });
     test('expandCommand', () {
@@ -101,7 +101,7 @@ void main() {
         butler.expandCommand('s');
         expect('missing WordingError', isNull);
       } on WordingError catch (exc) {
-        expect(exc.message, 'ambiguous command "s": show/sort/swap');
+        expect(exc.theMessage, 'ambiguous command "s": show/sort/swap');
       }
     });
     test('checkParameters-success', () {
@@ -116,7 +116,7 @@ void main() {
         butler.checkParameters(butler.splitParameters(expected), expected);
         expect('missing WordingError', isNull);
       } on WordingError catch (exc) {
-        expect(exc.message,
+        expect(exc.theMessage,
             'not a name: only letters are allowed, starting with upper case');
       }
       try {
@@ -124,14 +124,15 @@ void main() {
         butler.checkParameters(butler.splitParameters(expected), expected);
         expect('missing WordingError', isNull);
       } on WordingError catch (exc) {
-        expect(exc.message, 'parameter "name" is too short (2): [string]: K');
+        expect(
+            exc.theMessage, 'parameter "name" is too short (2): [string]: K');
       }
       try {
         butler.stringParameters = 'name="VeryLongName"';
         butler.checkParameters(butler.splitParameters(expected), expected);
         expect('missing WordingError', isNull);
       } on WordingError catch (exc) {
-        expect(exc.message,
+        expect(exc.theMessage,
             'parameter "name" is too long (8): [string]: VeryLongName');
       }
     });
@@ -141,7 +142,7 @@ void main() {
         butler.checkParameters(butler.splitParameters(expected), expected);
         expect('missing WordingError', isNull);
       } on WordingError catch (exc) {
-        expect(exc.message,
+        expect(exc.theMessage,
             'parameter "number": non negative number expected, not one');
       }
     });
@@ -151,7 +152,7 @@ void main() {
         butler.checkParameters(butler.splitParameters(expected), expected);
         expect('missing WordingError', isNull);
       } on WordingError catch (exc) {
-        expect(exc.message,
+        expect(exc.theMessage,
             'parameter "stringList": separator not allowed character: o');
       }
     });
@@ -161,7 +162,7 @@ void main() {
         butler.checkParameters(butler.splitParameters(expected), expected);
         expect('missing WordingError', isNull);
       } on WordingError catch (exc) {
-        expect(exc.message,
+        expect(exc.theMessage,
             'parameter "intList": not a non negative number in natList: one');
       }
     });
@@ -529,8 +530,7 @@ End:
       final lines =
           'name: joe *id: 12\n*name: bob id: 8\nname: charly id: 1'.split('\n');
       final regExp = RegExp(r'name: (\S+).*id: (\d+)');
-      var info;
-      info = SortInfo(
+      var info = SortInfo(
           logger, 'r', [SortRange(1, 1, true), SortRange(0, 0, false)],
           regExpRelevant: regExp);
       expect(info.sort(lines),
@@ -544,8 +544,7 @@ End:
     test('word-separator', () {
       final lines = 'Charly,22\nBob,222\nAda,20'.split('\n');
       final separator = RegExp(r',');
-      var info;
-      info = SortInfo(
+      var info = SortInfo(
           logger, 'w', [SortRange(0, 0, false), SortRange(1, 1, true)],
           separator: separator);
       expect(info.sort(lines), 'Ada,20\nBob,222\nCharly,22');

@@ -8,9 +8,8 @@ void main() {
   group('TextButlerIO-load', () {
     test('simple load', () {
       final butler = TextButlerIO();
-      final fnTemp = Directory.systemTemp.path +
-          Platform.pathSeparator +
-          'textbutler.load.txt';
+      final fnTemp =
+          '${Directory.systemTemp.path}${Platform.pathSeparator}textbutler.load.txt';
       final content = 'abc\ndef\n123';
       File(fnTemp).writeAsStringSync(content);
       expect(butler.execute('load output=input file="$fnTemp"'), isNull);
@@ -27,9 +26,8 @@ void main() {
     test('simple storage', () {
       final butler = TextButlerIO();
       butler.buffers['input'] = 'abc\n123\n';
-      final fnTemp = Directory.systemTemp.path +
-          Platform.pathSeparator +
-          'textbutler.store.txt';
+      final fnTemp =
+          '${Directory.systemTemp.path}${Platform.pathSeparator}textbutler.store.txt';
       expect(butler.execute('store input=input file="$fnTemp"'), isNull);
       final file = File(fnTemp);
       expect(file, isNotNull);

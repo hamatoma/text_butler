@@ -1,0 +1,6 @@
+#! /bin/bash
+./Prepare
+flutter build linux
+flutter build web
+mkdir -p website
+rsync -a --delete build/web/ website

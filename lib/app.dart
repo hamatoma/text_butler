@@ -66,6 +66,7 @@ class MyHomePage extends StatefulWidget {
   MyHomePage({Key? key, required this.title}) : super(key: key);
 
   @override
+  // ignore: library_private_types_in_public_api
   _MyHomePageState createState() => _MyHomePageState();
 }
 
@@ -259,7 +260,7 @@ class _MyHomePageState extends State<MyHomePage> {
     if ((_lastWidth - width).abs() >= 1.0 ||
         (_lastHeight - height3).abs() >= 1.0) {
       _ratio = width / height3;
-      _layoutController.text = 'ratio=' + sprintf('%.1f', [_ratio]);
+      _layoutController.text = 'ratio=${sprintf('%.1f', [_ratio])}';
       _lastWidth = width;
       _lastHeight = height3;
     }

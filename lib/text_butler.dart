@@ -12,14 +12,14 @@ class Hit {
 
 /// Each recognized programming error throw this error.
 class InternalError extends FormatException {
-  String message;
+  String theMessage;
   String location;
 
-  InternalError(this.location, this.message);
+  InternalError(this.location, this.theMessage);
 
   @override
   String toString() {
-    return 'Internal Error: [$location] $message';
+    return 'Internal Error: [$location] $theMessage';
   }
 }
 
@@ -63,7 +63,7 @@ class ParameterInfo {
       this.autoSeparator = false,
       this.patternError}) {
     if (type == ParameterType.nat || type == ParameterType.natList) {
-      this.delimited = false;
+      delimited = false;
     }
   }
 }
@@ -412,37 +412,27 @@ class ParameterValue {
         break;
       case ParameterType.natList:
         rc = natList!.fold(
-            '[natList]',
-            (previousValue, element) =>
-                previousValue + ' ' + element.toString());
+            '[natList]', (previousValue, element) => '$previousValue $element');
         break;
       case ParameterType.pattern:
         rc = '[pattern]: $string';
         break;
       case ParameterType.patternList:
-        rc = natList!.fold(
-            '[patternList]',
-            (previousValue, element) =>
-                previousValue + ' ' + element.toString());
+        rc = natList!.fold('[patternList]',
+            (previousValue, element) => '$previousValue $element');
         break;
       case ParameterType.string:
         rc = '[string]: $string';
         break;
       case ParameterType.stringList:
-        rc = natList!.fold(
-            '[stringList]',
-            (previousValue, element) =>
-                previousValue + ' ' + element.toString());
+        rc = natList!.fold('[stringList]',
+            (previousValue, element) => '$previousValue $element');
         break;
       case ParameterType.listOfStringList:
         rc = list!.fold(
             '[listOfStringList]',
             (previousValue, element) =>
-                previousValue +
-                ' ' +
-                '[' +
-                element.toString().substring(13) +
-                ']');
+                '$previousValue [${element.toString().substring(13)}]');
         break;
     }
     return rc;
@@ -468,9 +458,9 @@ class SortInfo {
   List<SortItem> build(String line, int lineNo) {
     final rc = <SortItem>[];
     int length = line.length;
-    if (this.mode == 'c') {
+    if (mode == 'c') {
       var rangeNo = 0;
-      for (var range in this.ranges ?? defaultRangeList) {
+      for (var range in ranges ?? defaultRangeList) {
         rangeNo++;
         if (range.from < length) {
           final last = min(length - 1, range.to);
@@ -488,10 +478,10 @@ class SortInfo {
           }
         }
       }
-    } else if (this.mode == 'w') {
-      final words = line.split(this.separator ?? RegExp(r'\s+'));
+    } else if (mode == 'w') {
+      final words = line.split(separator ?? RegExp(r'\s+'));
       final count = words.length;
-      for (var range in this.ranges ?? defaultRangeList) {
+      for (var range in ranges ?? defaultRangeList) {
         if (range.from < count) {
           final last = min(count - 1, range.to);
           final items = words.sublist(range.from, last + 1);
@@ -513,15 +503,15 @@ class SortInfo {
           }
         }
       }
-    } else if (this.mode == 'r') {
-      if (this.regExpRelevant == null) {
+    } else if (mode == 'r') {
+      if (regExpRelevant == null) {
         rc.add(defaultItem);
       } else {
-        final matcher = this.regExpRelevant?.firstMatch(line);
+        final matcher = regExpRelevant?.firstMatch(line);
         if (matcher == null) {
           logger.log('unmatched: $line');
         } else {
-          if (this.ranges == null) {
+          if (ranges == null) {
             rc.add(defaultItem);
           } else {
             final words = <String>[];
@@ -529,7 +519,7 @@ class SortInfo {
               words.add(matcher.group(ix) ?? '');
             }
             final count = words.length;
-            for (var range in this.ranges ?? defaultRangeList) {
+            for (var range in ranges ?? defaultRangeList) {
               if (range.from < count) {
                 final last = min(count - 1, range.to);
                 final items = words.sublist(range.from, last + 1);
@@ -580,7 +570,7 @@ class SortInfo {
       sortItems.add(SortLineInfo(logger, line, build(line, lineNo)));
     }
     sortItems.sort((a, b) => compare(a, b));
-    final rc = this.sortItems.map((e) => e.line).join('\n');
+    final rc = sortItems.map((e) => e.line).join('\n');
     return rc;
   }
 
@@ -728,8 +718,8 @@ class TextButler extends Logger {
   String? errorMessage;
 
   final regExpEndOfParameter = RegExp(r'[ =]');
-  final regExprAutoSeparator = RegExp(r'[^a-zA-Z0-9]');
-  final regexprSortInfo = RegExp(r'^[cw][\dn,-]*|^r[\dn,-]*(/.*)?');
+  final regExpAutoSeparator = RegExp(r'[^a-zA-Z0-9]');
+  final regExpSortInfo = RegExp(r'^[cw][\dn,-]*|^r[\dn,-]*(/.*)?');
   final paramBool = ParameterInfo(ParameterType.bool);
   final paramBaseChar = ParameterInfo(ParameterType.string,
       defaultValue: 'A', minLength: 1, maxLength: 1, delimited: false);
@@ -784,7 +774,7 @@ class TextButler extends Logger {
 
   TextButler() {
     paramSortInfo = ParameterInfo(ParameterType.string,
-        minLength: 1, pattern: regexprSortInfo);
+        minLength: 1, pattern: regExpSortInfo);
     for (var item in examples) {
       if (item.isNotEmpty) {
         final name = item.split(' ')[0];
@@ -844,10 +834,9 @@ class TextButler extends Logger {
                   expectedParameter.pattern!
                           .firstMatch(currentValue.asString()) ==
                       null) {
-                final message = expectedParameter.patternError != null
-                    ? expectedParameter.patternError
-                    : 'wrong syntax in parameter "$name": $currentValue';
-                throw WordingError(message!);
+                final message = expectedParameter.patternError ??
+                    'wrong syntax in parameter "$name": $currentValue';
+                throw WordingError(message);
               }
             }
             break;
@@ -961,15 +950,13 @@ class TextButler extends Logger {
       final parameters = ixBlank <= 0 ? '' : command.substring(ixBlank + 1);
       toHistory = dispatch(commandName, parameters);
     } on InternalError catch (exc) {
-      errorMessage = exc.location + ': ' + exc.message;
+      errorMessage = '${exc.location}: ${exc.theMessage}';
     } on WordingError catch (exc) {
-      errorMessage = exc.message;
+      errorMessage = exc.theMessage;
     }
     if (toHistory || getBuffer('history') != '') {
-      buffers['history'] = (errorMessage == null ? '' : '# ') +
-          getBuffer('history') +
-          command +
-          '\n';
+      buffers['history'] =
+          '${errorMessage == null ? '' : '# '}${getBuffer('history')}$command\n';
     }
 
     return errorMessage;
@@ -1484,7 +1471,7 @@ class TextButler extends Logger {
     if (buffers['log'] == '') {
       buffers['log'] = buffers['log']! + message;
     } else {
-      buffers['log'] = buffers['log']! + '\n' + message;
+      buffers['log'] = '${buffers['log']!}\n$message';
     }
     return true;
   }
@@ -1519,7 +1506,7 @@ class TextButler extends Logger {
   /// The ParameterValue instance is stored in [:map:].
   void parseListOfStringList(String name, MapParameter map) {
     String separator =
-        unshiftChar('parameter "$name": separator', regExprAutoSeparator);
+        unshiftChar('parameter "$name": separator', regExpAutoSeparator);
     final list = <ParameterValue>[];
     var again = true;
     while (again) {
@@ -1585,7 +1572,7 @@ class TextButler extends Logger {
   ParameterValue parseStringList(String name, MapParameter? map,
       {bool isPattern = false}) {
     String separator =
-        unshiftChar('parameter "$name": separator', regExprAutoSeparator);
+        unshiftChar('parameter "$name": separator', regExpAutoSeparator);
     final list = <ParameterValue>[];
     var again = true;
     while (again) {
@@ -1894,12 +1881,12 @@ class TextButler extends Logger {
 
 /// Each error in command formulation throw this exception.
 class WordingError extends FormatException {
-  String message;
+  String theMessage;
 
-  WordingError(this.message);
+  WordingError(this.theMessage);
 
   @override
   String toString() {
-    return 'WordingError: $message';
+    return 'WordingError: $theMessage';
   }
 }
