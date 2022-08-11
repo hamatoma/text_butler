@@ -1,0 +1,79 @@
+Damit können Texte in einen Puffer eingetragen werden. Die Position des Einschubs ist eine Zeilennummer oder ein Suchausdruck.
+Es kann eine Bedingung (Existieren eines Suchausdrucks), um die Einfügung zu ignorieren.
+
+=== Parameter ===
+
+{| class="wikitable"
+! Name
+! Typ
+! Beschreibung
+! Beispiel
+|-
+|-
+| '''input'''
+| [[Deutsche-Dokumentation#parametertypen|bufferName]]
+| Der Text aus diesem Puffer wird untersucht. Voreinstellung: input
+| <code>input=data</code>
+|-
+| '''output'''
+| [[Deutsche-Dokumentation#parametertypen|bufferName]]
+| das Ergebnis wird in diesen Puffer geschrieben. Voreinstellung: output
+| <code>output=result</code>
+|-
+| '''at'''
+| [[Deutsche-Dokumentation#parametertypen|nat]]
+| Die Zeilennummer (ab 1 gezählt), an der eingefügt wird. Der Wert 0 bedeutet: am Pufferende. Dieser Parameter schließt Parameter "position" aus.
+| <code>at=1</code>
+|-
+| '''above'''
+| [[Deutsche-Dokumentation#parametertypen|bool]]
+| Die Einfügung erfolgt oberhalb der Zeile mit dem Suchstring.
+| <code>app</code>
+|-
+| '''position'''
+| [[Deutsche-Dokumentation#parametertypen|pattern]]
+| Ein Suchausdruck, der die Einfügeposition bestimmt. Dieser Parameter schließt Parameter "at" aus.
+| <code>position="[debug]"</code><br/>
+<code>position=R/\[(debug|production)\]/</code>
+|-
+| '''exclusion'''
+| [[Deutsche-Dokumentation#parametertypen|pattern]]
+| Wird dieser Suchausdruck gefunden, erfolgt keine Einfügung.
+| <code>position="[debug]"</code><br/>
+<code>position=R/^bufferSize\s*=/</code>
+|-
+| '''what'''
+| [[Deutsche-Dokumentation#parametertypen|string]]
+| Das ist der Text, der eingefügt wird.
+| <code>what=i%"line1%nline2%n"</code><br/>
+<code>what=i%"%buffer3"</code>
+|}
+=== Beispiele ===
+==== Beispiel 1: Einfügen eines HTML-Rahmens ====
+Im Puffer html steht:
+<pre>
+<h1>Wellcome</h1>
+<p>Read and enjoi!</p>
+</pre>
+Kommando:
+<pre>
+insert in=html out=html at=1 what=i%"<html>%n<body>" exclusion=r/<body>/
+insert in=html out=html at=0 what=i%"</body>%n</html>" exclusion=r%</body>%
+</pre>
+Im Ergebnispuffer html steht:
+<pre>
+<html>
+<body>
+<h1>Wellcome</h1>
+<p>Read and enjoi!</p>
+</body>
+</html>
+</pre>
+Werden die Kommandos ein zweites Mal ausgeführt, ändert sich der Inhalt von Puffer html nicht.
+
+==== Beispiel 2: Eintrag von Parametern in eine PHP-Umgebung ====
+Im Puffer input der Inhalt von php.ini
+Kommando:
+<pre>
+input position=/[opcache]/ what=i%"opcache.enable=1%nopcache.enable_cli=1%nopcache.memory_consumption=512" exclude=r/^opcache.enabled/
+</pre>

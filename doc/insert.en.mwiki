@@ -1,0 +1,78 @@
+This allows texts to be entered in a buffer. The position of the inset is a line number or a search expression.
+There can be a condition (existence of a search expression) to ignore the insertion.
+
+=== Parameters ===
+
+{| class="wikitable"
+! Name
+! Type
+! Description
+! Example
+|-
+| '''input'''
+| [[English-Documentation#parametertypes|bufferName]]
+| The text from this buffer is examined. Default: input
+| <code>input=data</code>
+|-
+| '''output'''
+| [[English-Documentation#parametertypes|bufferName]]
+| The result is written to this buffer. Default: output
+| <code>output=result</code>
+|-
+| '''at'''
+| [[English-Documentation#parametertypes|nat]]
+| The line number (counting from 1) at which to insert. The value 0 means: at the end of the buffer. This parameter excludes the "position" parameter.
+| <code>at=1</code>
+|-
+| '''above'''
+| [[English-Documentation#parametertypes|bool]]
+| The insertion takes place above the line with the search string.
+| <code>above</code>
+|-
+| '''position'''
+| [[English-Documentation#parametertypes|pattern]]
+| A search expression that determines the insertion position. This parameter excludes the "at" parameter.
+| <code>position="[debug]"</code><br/>
+<code>position=R/\[(debug|production)\]/</code>
+|-
+| '''exclusion'''
+| [[English-Documentation#parametertypes|pattern]]
+| If this search expression is found, no insertion occurs.
+| <code>position="[debug]"</code><br/>
+<code>position=R/^bufferSize\s*=/</code>
+|-
+| '''what'''
+| [[English-Documentation#parametertypes|string]]
+| This is the text that will be pasted.
+| <code>what=i%"line1%nline2%n"</code><br/>
+<code>what=i%"%buffer3"</code>
+|}
+=== Examples ===
+==== Example 1: Inserting an HTML frame ====
+In the buffer html is:
+<pre>
+<h1>Welcome</h1>
+<p>Read and enjoy!</p>
+</pre>
+Command:
+<pre>
+insert in=html out=html at=1 what=i%"<html>%n<body>" exclusion=r/<body>/
+insert in=html out=html at=0 what=i%"</body>%n</html>" exclusion=r%</body>%
+</pre>
+The result buffer html contains:
+<pre>
+<html>
+<body>
+<h1>Welcome</h1>
+<p>Read and enjoy!</p>
+</body>
+</html>
+</pre>
+If the commands are executed a second time, the content of the html buffer does not change.
+
+==== Example 2: Entry of parameters in a PHP environment ====
+In the buffer input the content of php.ini
+Command:
+<pre>
+input position=/[opcache]/ what=i%"opcache.enable=1%nopcache.enable_cli=1%nopcache.memory_consumption=512" exclude=r/^opcache.enabled/
+</pre>

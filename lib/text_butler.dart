@@ -368,8 +368,10 @@ class ParameterValue {
     RegExp rc;
     switch (stringType) {
       case StringType.regExp:
-      case StringType.string:
         rc = RegExp(string!);
+        break;
+      case StringType.string:
+        rc = RegExp(RegExp.escape(string!));
         break;
       case StringType.regExpIgnoreCase:
         rc = RegExp(string!, caseSensitive: false);
@@ -547,7 +549,7 @@ class SortInfo {
       } else {
         final word = matcher.groupCount < ranges2.length &&
                 ranges2[ixFilter].from <= matcher.groupCount
-            ? matcher.group(ranges2[ixFilter].from)
+            ? matcher.group(ranges2[ixFilter].from + 1)
             : '';
         if (numeric) {
           final value = double.tryParse(word!);
@@ -758,6 +760,10 @@ class TextButler extends Logger {
     r'filter Filters=;r/<(name|id|email>(.*?)</;r/href="(.*?)"/ meta=% '
         'Templates=,"%group2%: %group1%1","link: %group2%"',
     '',
+    r'insert in=html out=html at=1 what=i%"<html>%n<body>" excl=r/<html>/',
+    r'insert in=html out=html at=0 what=i%"</body>%n</html>" excl=r%</html>%',
+    r'insert above position=r/debug|production/ what="max_count=1" ',
+    '',
     r'replace meta=& What=;r/ (\d+)/;": &0&"',
     r'replace What=;"Hello";"Hi"',
     '',
@@ -815,6 +821,7 @@ class TextButler extends Logger {
   final paramIntDefault1 =
       ParameterInfo(ParameterType.nat, defaultValue: '1', optional: false);
   final paramIntList = ParameterInfo(ParameterType.natList, delimited: false);
+  final paramNat = ParameterInfo(ParameterType.nat);
   final paramIntNeeded = ParameterInfo(ParameterType.nat, optional: false);
   final paramMarker = ParameterInfo(ParameterType.string,
       defaultValue: '#',
@@ -1014,6 +1021,9 @@ class TextButler extends Logger {
         break;
       case 'filter':
         executeFilter();
+        break;
+      case 'insert':
+        executeInsert();
         break;
       case 'replace':
         executeReplace();
@@ -1285,6 +1295,65 @@ class TextButler extends Logger {
 
   /// Implements the command "replace" specified by some [:parameters:].
   /// Throws an exception on errors.
+  void executeInsert() {
+    // r'insert at=1 what=i\"line 1\nline 2/" ,
+    // r'replace position=r/.$/ what="Hello" exclusion="hello"',
+    final expected = {
+      'above': paramBool,
+      'input': paramBufferName,
+      'output': paramBufferName,
+      'at': paramNat,
+      'position': paramPattern,
+      'exclusion': paramPattern,
+      'what': paramString,
+    };
+    final current = splitParameters(expected);
+    current.setIfUndefined('input', 'input');
+    current.setIfUndefined('output', 'output');
+    checkParameters(current, expected);
+    current.checkExactlyOneOf('at', 'position');
+    final content = getBuffer(current.asString('input'));
+    if (!current.hasParameter('what')) {
+      throw WordingError('missing parameter "what"');
+    }
+    if (current.hasParameter('exclusion') && current.asRegExp('exclusion').hasMatch(content)){
+      log('exclusion found: no insertion');
+    } else {
+      final lines = content.split('\n');
+      final what = current.asString('what');
+      if (current.hasParameter('at')) {
+        final position = current.asInt('at');
+        if (position == 0 || position >= lines.length) {
+          lines.add(what);
+        } else {
+          lines.insert(position - 1, what);
+        }
+      } else {
+        final position = current.asRegExp('position');
+        bool found = false;
+        int lineNo = 0;
+        for (var line in lines) {
+          lineNo++;
+          if (position.hasMatch(line)) {
+            found = true;
+            if (current.hasParameter('above')) {
+              lines.insert(lineNo - 1, what);
+            } else {
+              lines.insert(lineNo, what);
+            }
+            break;
+          }
+        }
+        if (! found){
+          lines.add(what);
+        }
+      }
+      final output = current.asString('output');
+      buffers[output] = lines.join('\n');
+    }
+  }
+ /// Implements the command "replace" specified by some [:parameters:].
+  /// Throws an exception on errors.
   void executeReplace() {
     // r'replace regexpr=/ (\d+)/ meta=\ with=": \0"',
     // r'replace what="Hello" value="*"',
@@ -1422,7 +1491,7 @@ class TextButler extends Logger {
         ? current.asRegExp('separator')
         : null;
     if (separator != null) type = 'word';
-    if (filter != null) {
+    if (filter != null || filters != null) {
       type = 'regexpr';
     }
     final lines = getBuffer(input).split('\n');
@@ -1461,7 +1530,7 @@ class TextButler extends Logger {
               .add(SortRange(max(1, value1) - 1, max(1, value2) - 1, numeric));
         }
       }
-      if (type.startsWith('r') && filter == null) {
+      if (type.startsWith('r') && filter == null && filters == null) {
         throw WordingError('missing parameter regexpr');
       }
       final info = SortInfo(this, type.substring(0, 1), ranges3,

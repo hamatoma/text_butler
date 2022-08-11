@@ -35,7 +35,8 @@ Im Puffer "todo" steht:
 <pre>Greetings
 </pre>
 Kommando:
-<pre>copy out=todo append
+<pre>copy text=i%"%n" out=todo append
+copy out=todo append
 </pre>
 Danach steht in "todo"
 <pre>Greetings

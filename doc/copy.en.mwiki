@@ -1,22 +1,22 @@
 === Parameters ===
 {| class="wikitable"
-! Surname
+! Name
 ! Type
-! description
-! example
+! Description
+! Example
 |-
 | '''append'''
-| [[English-Documentation#parametertypes|bool]]
+| [[English Documentation#parametertypes|bool]]
 | The result is appended in the destination buffer
 | append
 |-
 | '''input'''
-| [[English-Documentation#parametertypes|bufferName]]
+| [[English Documentation#parametertypes|bufferName]]
 | Buffer being copied. Default: input
 | input=examples
 |-
 | '''output'''
-| [[English-Documentation#parametertypes|bufferName]]
+| [[English Documentation#parametertypes|bufferName]]
 | The result is written into this buffer. Default: output
 | output=result
 |-
@@ -35,7 +35,8 @@ The "todo" buffer contains:
 <pre>Greetings
 </pre>
 Command:
-<pre>copy out=todo append
+<pre>copy text=i%"%n" out=todo append
+copy out=todo append
 </pre>
 After that the contents in "todo" is:
 <pre>Greetings
