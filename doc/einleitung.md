@@ -21,10 +21,10 @@ Bedeutung: es sollen nur Zeilen, die "adm" enthalten, ausgegeben werden.
 Nachdem auf "Execute" gedrückt wurde, erscheint im Puffer "output":
 <pre>Bob,1,adm
 </pre>
-In der Komandozeile wird eingetragen (":
-<pre>sort how="w3,n2" separator=","
+In der Komandozeile wird eingetragen:
+<pre>sort ranges="3,n2" separator=","
 </pre>
-Das bedeutet: Sortiere wortweise, berücksichtige Spalte 3, danach Spalte 2, wobei Spalte 2 numerisch zu sortieren ist ("n"), Worte werden mit "," getrennt.
+Das bedeutet: Sortiere wortweise (induziert durch den Parameter "separator"), berücksichtige Spalte 3, danach Spalte 2, wobei Spalte 2 numerisch zu sortieren ist ("n"), Worte werden mit "," getrennt.
 
 Nachdem auf "Execute" gedrückt wurde, erscheint im Puffer "output":
 <pre>Bob,1,adm

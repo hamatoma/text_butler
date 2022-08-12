@@ -1,3 +1,10 @@
+## [0.4.1] - 2022.08.12
+
+* new command: insert
+* fix: handling of Filters in command "sort"
+* fix: handling of strings in "pattern" parameters: Escaping special chars.
+* corrections in documentation
+
 ## [0.4.0] - 2022.08.06
 
 new commands: sort reverse

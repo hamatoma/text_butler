@@ -645,23 +645,37 @@ name: joe id: 3 year: 2016''');
     });
     test('position', () {
       butler.buffers['input'] = '1\n2\n3';
-      expect(butler.execute('insert what="A" position="2" above' ), isNull);
-      expect(butler.execute('insert in=output what="Z" position=r/[2]/ excl="Z"'), isNull);
-      expect(butler.execute('insert in=output what="Z" position=r/[2]/ excl="Z"'), isNull);
+      expect(butler.execute('insert what="A" position="2" above'), isNull);
+      expect(
+          butler.execute('insert in=output what="Z" position=r/[2]/ excl="Z"'),
+          isNull);
+      expect(
+          butler.execute('insert in=output what="Z" position=r/[2]/ excl="Z"'),
+          isNull);
       expect(butler.getBuffer('output'), '1\nA\n2\nZ\n3');
     });
     test('insert-examples-1', () {
       butler.buffers['html'] = '<h1>Wellcome</h1>\n<p>Read and enjoi!</p>';
-      expect(butler.execute(r'insert in=html out=html at=1 what=i%"<html>%n<body>" exclusion=r/<body>/' ), isNull);
-      expect(butler.execute(r'insert in=html out=html at=0 what=i%"</body>%n</html>" exclusion=r%</body>%'), isNull);
-      expect(butler.getBuffer('html'), '<html>\n<body>\n<h1>Wellcome</h1>\n<p>Read and enjoi!</p>\n</body>\n</html>');
+      expect(
+          butler.execute(
+              r'insert in=html out=html at=1 what=i%"<html>%n<body>" exclusion=r/<body>/'),
+          isNull);
+      expect(
+          butler.execute(
+              r'insert in=html out=html at=0 what=i%"</body>%n</html>" exclusion=r%</body>%'),
+          isNull);
+      expect(butler.getBuffer('html'),
+          '<html>\n<body>\n<h1>Wellcome</h1>\n<p>Read and enjoi!</p>\n</body>\n</html>');
     });
-      test('insert-examples-2', () {
+    test('insert-examples-2', () {
       butler.buffers['input'] = ''''# line1
 [opcache]
 ;opcache.enabled=1</p>
 ''';
-      expect(butler.execute(r'insert position=/[opcache]/ what=i%"opcache.enable=1%nopcache.enable_cli=1%nopcache.memory_consumption=512" exclusion=r/^opcache.enabled/' ), isNull);
+      expect(
+          butler.execute(
+              r'insert position=/[opcache]/ what=i%"opcache.enable=1%nopcache.enable_cli=1%nopcache.memory_consumption=512" exclusion=r/^opcache.enabled/'),
+          isNull);
       expect(butler.getBuffer('output'), ''''# line1
 [opcache]
 opcache.enable=1

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'app.dart';
 
-const butlerVersion = '0.4.0';
+const butlerVersion = '0.4.1';
 void main() {
   runApp(MyApp());
 }

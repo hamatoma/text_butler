@@ -1316,7 +1316,8 @@ class TextButler extends Logger {
     if (!current.hasParameter('what')) {
       throw WordingError('missing parameter "what"');
     }
-    if (current.hasParameter('exclusion') && current.asRegExp('exclusion').hasMatch(content)){
+    if (current.hasParameter('exclusion') &&
+        current.asRegExp('exclusion').hasMatch(content)) {
       log('exclusion found: no insertion');
     } else {
       final lines = content.split('\n');
@@ -1344,7 +1345,7 @@ class TextButler extends Logger {
             break;
           }
         }
-        if (! found){
+        if (!found) {
           lines.add(what);
         }
       }
@@ -1352,7 +1353,8 @@ class TextButler extends Logger {
       buffers[output] = lines.join('\n');
     }
   }
- /// Implements the command "replace" specified by some [:parameters:].
+
+  /// Implements the command "replace" specified by some [:parameters:].
   /// Throws an exception on errors.
   void executeReplace() {
     // r'replace regexpr=/ (\d+)/ meta=\ with=": \0"',

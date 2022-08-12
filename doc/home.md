@@ -13,7 +13,7 @@ There are predefined buffers, but additional buffers can be defined.
 Three lines are entered in the "input" buffer:
 <pre>Joe,2,usr
 Ada,3,usr
-Bob,1,Adm
+Bob,1,adm
 </pre>
 Enter in the command line:
 <pre>filter what="adm"
@@ -24,9 +24,9 @@ After clicking "Execute", the following appears in the buffer named "output":
 <pre>Bob,1,adm
 </pre>
 In the command line is entered:
-<pre>sort how="w3,n2" separator=","
+<pre>sort ranges="3,n2" separator=","
 </pre>
-This means: Sort word by word, consider column 3, then column 2, whereby column 2 is to be sorted numerically ("n"), words are separated with ",".
+This means: Sort word by word (indicated by the "separator" parameter), consider column 3, then column 2, whereby column 2 is to be sorted numerically ("n"), words are separated with ",".
 
 After pressing "Execute", that appears in the buffer named "output":
 <pre>Bob,1,adm
@@ -67,6 +67,3 @@ unzip website.tgz && rm website.tgz
 </pre>
 # Translation
 * [[Einleitung]]
-
-
-
