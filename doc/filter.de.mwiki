@@ -18,6 +18,16 @@ Mit Suchmustern werden die Teile der Eingabe spezifiziert, die in der Ausgabe er
 | Es werden nur Zeilen untersucht, die vor einer Zeile stehen, die auf dieses Suchmuster passt.
 | <code>end="</address>"</code>
 |-
+| '''excluded'''
+| [[Deutsche-Dokumentation#parametertypen|pattern]]
+| Passt eine Zeile auf diesen regulärer Ausdruck, wird sie '''nicht''' ins Ziel übernommen.
+| <code>excluded=r/2021\.\d+.\d+/</code>
+|-
+| '''Excluded'''
+| [[Deutsche-Dokumentation#parametertypen|patternList]]
+| Eine Liste von regulären Ausdrücken: Passte eine auf eine Zeile, wird diese '''nicht''' ins Ziel übernommen. Auto-Separator.
+| <code>Excluded=;/Hello /;r/[hH]i /"</code>
+|-
 | '''filter'''
 | [[Deutsche-Dokumentation#parametertypen|pattern]]
 | Passt eine Zeile auf diesen regulärer Ausdruck, wird sie ins Ziel übernommen.
@@ -51,7 +61,7 @@ Nur sinnvoll, wenn sowohl '''start''' und '''end''' definiert sind. Voreinstellu
 |-
 | '''start'''
 | [[Deutsche-Dokumentation#parametertypen|pattern]]
-| Es werden nur Zeilen untersucht, die hinter einer Zeile stehen, die auf dieses Suchmuster passt.
+| Es werden nur Zeilen untersucht, die ab einer Zeile stehen, die auf dieses Suchmuster passt.
 | <code>start=/<address>/</code><br/><code>start=r/<(id|name)/</code>
 |-
 | '''template'''
@@ -105,6 +115,7 @@ Gilt für alle Beispiele: In Puffer input steht:
   </person>
 </staff>
 </pre>
+==== Beispiel 1 ====
 Kommando:
 <pre>filter fi=/name/
 </pre>
@@ -114,6 +125,7 @@ In Puffer output steht:
     <name>Berta</name>
     <name>Charly</name>
 </pre>
+==== Beispiel 2 ====
 Kommando:
 <pre>filter start=/<person/ end=!</person! fi=/name/ repeat=2
 </pre>
@@ -121,8 +133,9 @@ In Puffer output steht:
 <pre>    <name>Adam</name>
     <name>Berta</name>
 </pre>
+==== Beispiel 3 ====
 Kommando:
-<pre>filter start=/<person/ end=!</person! fi=r/<(name|id)>(.*?)</ repeat=2 template="%group1%: %group2%
+<pre>filter start=/<person/ end=!</person! fi=r/<(name|id)>(.*?)</ repeat=2 template="%group1%: %group2%"
 </pre>
 In Puffer output steht:
 <pre>id: 1
@@ -130,8 +143,9 @@ name: Adam
 id: 2
 name Berta
 </pre>
+==== Beispiel 4 ====
 Kommando:
-<pre>filter start=/<person/ end=!</person! Filters=;"<name";"<id" repeat=2
+<pre>filter start=/<person/ end=!/person! Filters=;"<name";"<id" repeat=2
 </pre>
 In Puffer output:
 <pre>    <id>1</id>
@@ -139,12 +153,23 @@ In Puffer output:
     <id>1</id>
     <name>Berta</name>
 </pre>
+==== Beispiel 5 ====
 Kommando:
-<pre>filter start=/<person/ end=!</person! Filters=;r"<(name)>(.?*)<";r"<id>(.?*)<" repeat=2 Templates=";%1%: %2%;no: %1%"
+<pre>filter start=/<person/ end=!</person! Filters=;r"<(name)>(.*?)<";r"<id>(.*?)<" repeat=2 Templates=;"%1%: %2%\n";"no: %1%\n"
 </pre>
 In Puffer output:
 <pre>no: 1
 name: Adam
 no: 2
 name: Berta
+</pre>
+==== Beispiel 6 ====
+Kommando:
+<pre>filter start=/<person/ excluded=r!id|person|staff!
+</pre>
+In Puffer output steht:
+<pre>
+    <id>1</id>
+    <id>2</id>
+    <id>3</id>
 </pre>

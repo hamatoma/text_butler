@@ -1,3 +1,7 @@
+## [0.5.1] - 2022.09.27
+
+* new parameters "excluded" and "Excluded" for the command "filter"
+
 ## [0.4.1] - 2022.08.12
 
 * new command: insert

@@ -43,7 +43,7 @@ class ParameterInfo {
   /// Specifies the "syntax" of the parameter, the only meaningful for strings
   final RegExp? pattern;
 
-  /// If [:pattern:] does not match, this message is print.
+  /// If [pattern] does not match, this message is print.
   final String? patternError;
 
   /// Only for a string: the parameter must be put between two delimiters
@@ -79,7 +79,7 @@ class ParameterSet {
 
   ParameterSet(this.map, this.butler, this.expected);
 
-  /// Returns a parameter given by [:name:] as an integer.
+  /// Returns a parameter given by [name] as an integer.
   bool asBool(String name) {
     bool rc = map.containsKey(name);
     if (rc && (map[name]!.parameterType != ParameterType.bool)) {
@@ -88,7 +88,7 @@ class ParameterSet {
     return rc;
   }
 
-  /// Returns a parameter given by [:name:] as an integer.
+  /// Returns a parameter given by [name] as an integer.
   int asInt(String name) {
     if (!map.containsKey(name)) {
       throw InternalError('ParameterSet.asInt', 'unknown parameter $name');
@@ -97,10 +97,19 @@ class ParameterSet {
     return rc;
   }
 
-  /// Returns a member of a "auto selector list" stored in parameter [:name:].
+  String asKeyword(String name) {
+    if (!map.containsKey(name)) {
+      throw InternalError(
+          'ParameterSet.asKeyword()', 'unknown parameter $name');
+    }
+    final rc = map[name]!.asString();
+    return rc;
+  }
+
+  /// Returns a member of a "auto selector list" stored in parameter [name].
   /// The list starts with a separator: free choice of a separator.
   /// Example: parameter 'animals' contains ",cat,dog".
-  /// Returns the [:index:]-th member of the list.
+  /// Returns the [index]-th member of the list.
   int asListMemberInt(String name, int index, {int? defaultValue}) {
     int? rc;
     if (!hasParameter(name)) {
@@ -123,9 +132,9 @@ class ParameterSet {
     return rc;
   }
 
-  /// Returns a member of a "list of string lists" stored in parameter [:name:]
-  /// at [:index:].
-  /// Returns the [:index:]-th member of the list as list of strings.
+  /// Returns a member of a "list of string lists" stored in parameter [name]
+  /// at [index].
+  /// Returns the [index]-th member of the list as list of strings.
   List<String> asListMemberList(String name, int index) {
     if (!hasParameter(name)) {
       throw InternalError('asListMember()', 'unknown parameter "$name"');
@@ -149,10 +158,10 @@ class ParameterSet {
     return rc;
   }
 
-  /// Returns a member of a "auto selector list" stored in parameter [:name:].
+  /// Returns a member of a "auto selector list" stored in parameter [name].
   /// The list starts with a separator: free choice of a separator.
   /// Example: parameter 'animals' contains ",cat,dog".
-  /// Returns the [:index:]-th member of the list.
+  /// Returns the [index]-th member of the list.
   String asListMemberString(String name, int index) {
     if (!hasParameter(name)) {
       throw InternalError('asListMember()', 'unknown parameter "$name"');
@@ -176,7 +185,7 @@ class ParameterSet {
   }
 
   /// Returns a RegExp instance.
-  /// Throws [:InternalError:] on error.
+  /// Throws [InternalError] on error.
   RegExp asRegExp(String name) {
     if (!map.containsKey(name)) {
       throw InternalError('ParameterSet.asInt', 'unknown parameter $name');
@@ -185,18 +194,9 @@ class ParameterSet {
     return rc;
   }
 
-  String asKeyword(String name) {
-    if (!map.containsKey(name)) {
-      throw InternalError(
-          'ParameterSet.asKeyword()', 'unknown parameter $name');
-    }
-    final rc = map[name]!.asString();
-    return rc;
-  }
-
-  /// Returns a parameter given by [:name:] as an integer.
-  /// [:defaultValue:]: the result if [:defaultValue:] is not null and the parameter
-  /// [:name:] is not defined:
+  /// Returns a parameter given by [name] as an integer.
+  /// [defaultValue]: the result if [defaultValue] is not null and the parameter
+  /// [name] is not defined:
   String asString(String name, {String? defaultValue}) {
     String rc;
     if (!map.containsKey(name)) {
@@ -212,9 +212,9 @@ class ParameterSet {
   }
 
   /// Checks whether one of two parameters is defined or none.
-  /// [:first:] is the name of the first parameter to inspect.
-  /// [:second:] is the name of the second parameter to inspect.
-  /// On error [:WordingError:] is thrown.
+  /// [first] is the name of the first parameter to inspect.
+  /// [second] is the name of the second parameter to inspect.
+  /// On error [WordingError] is thrown.
   void checkAtMostOneOf(String first, String second) {
     if (map.containsKey(first) && map.containsKey(second)) {
       throw WordingError(
@@ -223,19 +223,25 @@ class ParameterSet {
   }
 
   /// Checks whether exactly one of two parameters is defined.
-  /// [:first:] is the name of the first parameter to inspect.
-  /// [:second:] is the name of the second parameter to inspect.
-  /// On error [:WordingError:] is thrown.
-  void checkExactlyOneOf(String first, String second) {
-    if (!map.containsKey(first) && !map.containsKey(second)) {
-      throw WordingError('missing parameter "$first" or "$second"');
+  /// [first] is the name of the first parameter to inspect.
+  /// [second] is the name of the second parameter to inspect.
+  /// On error [WordingError] is thrown.
+  void checkExactlyOneOf(List<String> list) {
+    String? first;
+    for (final item in list) {
+      if (map.containsKey(item)) {
+        if (first != null) {
+          throw WordingError('define parameter "$first" or "$item", not both');
+        }
+        first = item;
+      }
     }
-    if (map.containsKey(first) && map.containsKey(second)) {
-      throw WordingError('define parameter "$first" or "$second", not both');
+    if (first == null) {
+      throw WordingError('missing one of the parameters "${list.join(" ")}"');
     }
   }
 
-  /// Returns the length of a list (stringList, intList...) given by [:name:].
+  /// Returns the length of a list (stringList, intList...) given by [name].
   int countOfList(String name) {
     int? rc;
     if (!expected.containsKey(name)) {
@@ -279,7 +285,7 @@ class ParameterSet {
   }
 
   /// Tests whether two list parameters have the same length.
-  /// If not a [:WordingException:] is thrown.
+  /// If not a [WordingException] is thrown.
   void testSameListLength(String name1, String name2) {
     if (hasParameter(name1) && hasParameter(name2)) {
       int length1 = countOfList(name1);
@@ -473,97 +479,7 @@ class SortInfo {
   SortInfo(this.logger, this.mode, this.ranges,
       {this.separator, this.filter, this.filters});
 
-  /// Handles the "sort value" of a regular expression filter.
-  /// Returns a list of [:SortItem:] instances representing the sort "value"
-  /// of given [:line:].
-  /// [:lineNo:] the line number [1..N], used for error messages.
-  List<SortItem> buildFilterItems(String line, int lineNo) {
-    final rc = <SortItem>[];
-    final matcher = filter?.firstMatch(line);
-    if (matcher == null) {
-      logger.log('unmatched line $lineNo: $line');
-      _addDefault(ranges == null ? false : ranges![0].numeric, rc);
-    } else {
-      if (ranges == null) {
-        rc.add(SortItem(false, stringValues: [defaultSortStringValue]));
-      } else {
-        final words = <String>[];
-        for (var ix = 1; ix <= matcher.groupCount; ix++) {
-          words.add(matcher.group(ix) ?? '');
-        }
-        final count = words.length;
-        for (var range in ranges ?? defaultRangeList) {
-          if (range.from < count) {
-            final last = min(count - 1, range.to);
-            final items = words.sublist(range.from, last + 1);
-            if (range.numeric) {
-              final items2 = <double>[];
-              var rangeNo = 0;
-              for (var value in items) {
-                var value2 = double.tryParse(value);
-                if (value2 == null) {
-                  logger.log(
-                      'line $lineNo: word "$value" in range $rangeNo is not a number');
-                  value2 = 0.0;
-                }
-                items2.add(value2);
-              }
-              rc.add(SortItem(true, floatValues: items2));
-            } else {
-              rc.add(SortItem(false, stringValues: items));
-            }
-          }
-        }
-      }
-    }
-    return rc;
-  }
-
-  /// Adds a [:SortItem:] instance to [:rc:] with a sort value used for not
-  /// matching parts.
-  void _addDefault(bool isNumeric, List<SortItem> items) {
-    if (isNumeric) {
-      items.add(SortItem(true, floatValues: [defaultSortFloatValue]));
-    } else {
-      items.add(SortItem(false, stringValues: [defaultSortStringValue]));
-    }
-  }
-
-  /// Handles the "sort value" of a regular expression filter list.
-  /// Returns a list of [:SortItem:] instances representing the sort "value"
-  /// of given [:line:].
-  /// [:lineNo:] the line number [1..N], used for error messages.
-  List<SortItem> buildFiltersItems(String line, int lineNo) {
-    final rc = <SortItem>[];
-    var ranges2 =
-        ranges ?? filters!.map((x) => SortRange(1, 1, false)).toList();
-    var ixFilter = -1;
-    for (var filter in filters!) {
-      ixFilter++;
-      final matcher = filter.firstMatch(line);
-      final numeric =
-          ixFilter < ranges2.length ? ranges2[ixFilter].numeric : false;
-      if (matcher == null) {
-        logger.log('unmatched regex #${ixFilter + 1} in line #$lineNo: $line');
-        _addDefault(numeric, rc);
-      } else {
-        final word = matcher.groupCount < ranges2.length &&
-                ranges2[ixFilter].from <= matcher.groupCount
-            ? matcher.group(ranges2[ixFilter].from + 1)
-            : '';
-        if (numeric) {
-          final value = double.tryParse(word!);
-          final items = [value ?? defaultSortFloatValue];
-          rc.add(SortItem(true, floatValues: items));
-        } else {
-          rc.add(SortItem(false, stringValues: [word!]));
-        }
-      }
-    }
-    return rc;
-  }
-
-  /// Builds the sort relevant string from a [:line:]: cuts the parts defined
+  /// Builds the sort relevant string from a [line]: cuts the parts defined
   /// in the command line: some character/word ranges
   List<SortItem> build(String line, int lineNo) {
     var rc = <SortItem>[];
@@ -629,7 +545,87 @@ class SortInfo {
     return rc;
   }
 
-  /// Compares two items of sort relevant data [:a:] and [:b:].
+  /// Handles the "sort value" of a regular expression filter.
+  /// Returns a list of [SortItem] instances representing the sort "value"
+  /// of given [line].
+  /// [lineNo] the line number [1..N], used for error messages.
+  List<SortItem> buildFilterItems(String line, int lineNo) {
+    final rc = <SortItem>[];
+    final matcher = filter?.firstMatch(line);
+    if (matcher == null) {
+      logger.log('unmatched line $lineNo: $line');
+      _addDefault(ranges == null ? false : ranges![0].numeric, rc);
+    } else {
+      if (ranges == null) {
+        rc.add(SortItem(false, stringValues: [defaultSortStringValue]));
+      } else {
+        final words = <String>[];
+        for (var ix = 1; ix <= matcher.groupCount; ix++) {
+          words.add(matcher.group(ix) ?? '');
+        }
+        final count = words.length;
+        for (var range in ranges ?? defaultRangeList) {
+          if (range.from < count) {
+            final last = min(count - 1, range.to);
+            final items = words.sublist(range.from, last + 1);
+            if (range.numeric) {
+              final items2 = <double>[];
+              var rangeNo = 0;
+              for (var value in items) {
+                var value2 = double.tryParse(value);
+                if (value2 == null) {
+                  logger.log(
+                      'line $lineNo: word "$value" in range $rangeNo is not a number');
+                  value2 = 0.0;
+                }
+                items2.add(value2);
+              }
+              rc.add(SortItem(true, floatValues: items2));
+            } else {
+              rc.add(SortItem(false, stringValues: items));
+            }
+          }
+        }
+      }
+    }
+    return rc;
+  }
+
+  /// Handles the "sort value" of a regular expression filter list.
+  /// Returns a list of [SortItem] instances representing the sort "value"
+  /// of given [line].
+  /// [lineNo] the line number [1..N], used for error messages.
+  List<SortItem> buildFiltersItems(String line, int lineNo) {
+    final rc = <SortItem>[];
+    var ranges2 =
+        ranges ?? filters!.map((x) => SortRange(1, 1, false)).toList();
+    var ixFilter = -1;
+    for (var filter in filters!) {
+      ixFilter++;
+      final matcher = filter.firstMatch(line);
+      final numeric =
+          ixFilter < ranges2.length ? ranges2[ixFilter].numeric : false;
+      if (matcher == null) {
+        logger.log('unmatched regex #${ixFilter + 1} in line #$lineNo: $line');
+        _addDefault(numeric, rc);
+      } else {
+        final word = matcher.groupCount < ranges2.length &&
+                ranges2[ixFilter].from <= matcher.groupCount
+            ? matcher.group(ranges2[ixFilter].from + 1)
+            : '';
+        if (numeric) {
+          final value = double.tryParse(word!);
+          final items = [value ?? defaultSortFloatValue];
+          rc.add(SortItem(true, floatValues: items));
+        } else {
+          rc.add(SortItem(false, stringValues: [word!]));
+        }
+      }
+    }
+    return rc;
+  }
+
+  /// Compares two items of sort relevant data [a] and [b].
   /// @return 0: a and b are equal
   /// lower 0: a lower than b
   /// greater 0: a greater than b
@@ -638,7 +634,7 @@ class SortInfo {
     return rc;
   }
 
-  /// Sorts a list of [:lines:] with the sort relevant info.
+  /// Sorts a list of [lines] with the sort relevant info.
   /// Than the list is sorted.
   /// The result is the join of the sorted lines.
   String sort(List<String> lines) {
@@ -656,6 +652,16 @@ class SortInfo {
   double toDouble(String value) {
     double rc = double.tryParse(value) ?? 0.0;
     return rc;
+  }
+
+  /// Adds a [SortItem] instance to [rc] with a sort value used for not
+  /// matching parts.
+  void _addDefault(bool isNumeric, List<SortItem> items) {
+    if (isNumeric) {
+      items.add(SortItem(true, floatValues: [defaultSortFloatValue]));
+    } else {
+      items.add(SortItem(false, stringValues: [defaultSortStringValue]));
+    }
   }
 }
 
@@ -874,8 +880,8 @@ class TextButler extends Logger {
 
   List<String> get examples => _examplesBasic;
 
-  /// Tests whether the [:current:] parameters match the [:expected:].
-  /// Throws [:WordingErrors:] on error.
+  /// Tests whether the [current] parameters match the [expected].
+  /// Throws [WordingErrors] on error.
   void checkParameters(ParameterSet current, MapParameterInfo expected) {
     /// Supply default values in current if that does not exist:
     for (var entry in expected.entries) {
@@ -997,7 +1003,7 @@ class TextButler extends Logger {
     return rc;
   }
 
-  /// Executes the command [:commandName:] with the [:parameters:].
+  /// Executes the command [commandName] with the [parameters].
   /// This method must be overridden by classes to expand to other commands.
   bool dispatch(String? commandName, String parameters) {
     var toHistory = true;
@@ -1047,8 +1053,8 @@ class TextButler extends Logger {
   }
 
   /// Executes a command.
-  /// [:command:] is a command (with parameters) like "show what=buffers"
-  /// [:stringParameters:] is the string to manipulate.
+  /// [command] is a command (with parameters) like "show what=buffers"
+  /// [stringParameters] is the string to manipulate.
   /// Returns null on success, an error message otherwise.
   String? execute(String command) {
     errorMessage = null;
@@ -1071,7 +1077,7 @@ class TextButler extends Logger {
     return errorMessage;
   }
 
-  /// Implements the command "clear" specified by some [:parameters:].
+  /// Implements the command "clear" specified by some [parameters].
   /// Throws an exception on errors.
   void executeClear() {
     // 'copy input=input output=output append',
@@ -1086,7 +1092,7 @@ class TextButler extends Logger {
     buffers[target] = '';
   }
 
-  /// Implements the command "copy" specified by some [:parameters:].
+  /// Implements the command "copy" specified by some [parameters].
   /// Throws an exception on errors.
   void executeCopy() {
     // 'copy input=input output=output append',
@@ -1116,7 +1122,7 @@ class TextButler extends Logger {
     }
   }
 
-  /// Implements the command "count" specified by some [:parameters:].
+  /// Implements the command "count" specified by some [parameters].
   /// Throws an exception on errors.
   void executeCount() {
     // r'count regexpr="\d+" output=count',
@@ -1145,7 +1151,7 @@ class TextButler extends Logger {
     buffers[target] = append ? getBuffer(target) + result : result;
   }
 
-  /// Implements the command "duplicate" specified by some [:parameters:].
+  /// Implements the command "duplicate" specified by some [parameters].
   /// Throws an exception on errors.
   void executeDuplicate() {
     //     'duplicate count=5 var=# offset=-1 meta=% value=/%n/',
@@ -1184,7 +1190,7 @@ class TextButler extends Logger {
     store(current, buffer.toString());
   }
 
-  /// Implements the command "execute" specified by some [:parameters:].
+  /// Implements the command "execute" specified by some [parameters].
   /// Throws an exception on errors.
   void executeExecute() {
     // 'execute input=filter_log',
@@ -1205,7 +1211,7 @@ class TextButler extends Logger {
     }
   }
 
-  /// Implements the command "replace" specified by some [:parameters:].
+  /// Implements the command "replace" specified by some [parameters].
   /// Throws an exception on errors.
   void executeFilter() {
     // r'filter start=/^Name: Miller/ end=/^Name:/ regexpr=/^\s*[^#\s] count=1/',
@@ -1213,6 +1219,8 @@ class TextButler extends Logger {
     final expected = {
       'append': paramBool,
       'end': paramPattern,
+      'excluded': paramPattern,
+      'Excluded': paramPatternList,
       'filter': paramPattern,
       'Filters': paramPatternList,
       'input': paramBufferName,
@@ -1227,13 +1235,20 @@ class TextButler extends Logger {
     current.setIfUndefined('input', 'input');
     current.setIfUndefined('output', 'output');
     checkParameters(current, expected);
-    current.checkExactlyOneOf('filter', 'Filters');
+    current.checkAtMostOneOf('filter', 'Filters');
+    current.checkAtMostOneOf('excluded', 'Excluded');
     current.checkAtMostOneOf('template', 'Templates');
-    List<RegExp> filters;
+    List<RegExp>? filters;
+    List<RegExp>? excluded;
     if (current.hasParameter('filter')) {
       filters = [RegExp(current.asString('filter'))];
-    } else {
+    } else if (current.hasParameter('Filters')) {
       filters = current.map['Filters']!.asPatterns();
+    }
+    if (current.hasParameter('excluded')) {
+      excluded = [RegExp(current.asString('excluded'))];
+    } else if (current.hasParameter('Excluded')) {
+      excluded = current.map['Excluded']!.asPatterns();
     }
     List<String>? templates;
     if (current.hasParameter('template')) {
@@ -1251,10 +1266,10 @@ class TextButler extends Logger {
     int? start, end;
     final hit = Hit();
     if (hasStart) {
-      start = search(source, [RegExp(current.asString('start'))], hit);
+      start = search(source, [RegExp(current.asString('start'))], null, hit);
     }
     if (current.hasParameter('end')) {
-      end = search(source, [RegExp(current.asString('end'))], hit);
+      end = search(source, [RegExp(current.asString('end'))], null, hit);
     }
     final buffer = StringBuffer();
     var loop = 0;
@@ -1263,7 +1278,8 @@ class TextButler extends Logger {
     while (repeat == 0 || loop++ < repeat) {
       int? ixHit;
       while (start! <= end!) {
-        if ((ixHit = search(source, filters, hit, from: start, until: end)) ==
+        if ((ixHit = search(source, filters, excluded, hit,
+                from: start, until: end)) ==
             null) {
           break;
         } else {
@@ -1278,14 +1294,14 @@ class TextButler extends Logger {
         }
       }
       if (hasStart) {
-        start = search(source, [RegExp(current.asString('start'))], hit,
+        start = search(source, [RegExp(current.asString('start'))], null, hit,
             from: end + 1);
         if (start == null) {
           break;
         }
       }
       if (current.hasParameter('end')) {
-        end = search(source, [RegExp(current.asString('start'))], hit,
+        end = search(source, [RegExp(current.asString('start'))], null, hit,
                 from: start + 1) ??
             source.length - 1;
       }
@@ -1293,7 +1309,7 @@ class TextButler extends Logger {
     store(current, buffer.toString());
   }
 
-  /// Implements the command "replace" specified by some [:parameters:].
+  /// Implements the command "replace" specified by some [parameters].
   /// Throws an exception on errors.
   void executeInsert() {
     // r'insert at=1 what=i\"line 1\nline 2/" ,
@@ -1311,7 +1327,7 @@ class TextButler extends Logger {
     current.setIfUndefined('input', 'input');
     current.setIfUndefined('output', 'output');
     checkParameters(current, expected);
-    current.checkExactlyOneOf('at', 'position');
+    current.checkExactlyOneOf(['at', 'position']);
     final content = getBuffer(current.asString('input'));
     if (!current.hasParameter('what')) {
       throw WordingError('missing parameter "what"');
@@ -1354,7 +1370,7 @@ class TextButler extends Logger {
     }
   }
 
-  /// Implements the command "replace" specified by some [:parameters:].
+  /// Implements the command "replace" specified by some [parameters].
   /// Throws an exception on errors.
   void executeReplace() {
     // r'replace regexpr=/ (\d+)/ meta=\ with=": \0"',
@@ -1420,7 +1436,7 @@ class TextButler extends Logger {
     store(current, content);
   }
 
-  /// Implements the command "replace" specified by some [:parameters:].
+  /// Implements the command "replace" specified by some [parameters].
   /// Throws an exception on errors.
   void executeReverse() {
     // 'show what=buffers',
@@ -1439,7 +1455,7 @@ class TextButler extends Logger {
     buffers[output] = lines2;
   }
 
-  /// Implements the command "replace" specified by some [:parameters:].
+  /// Implements the command "replace" specified by some [parameters].
   /// Throws an exception on errors.
   void executeShow() {
     // 'show what=buffers',
@@ -1460,7 +1476,7 @@ class TextButler extends Logger {
     store(current, list.join('\n'));
   }
 
-  /// Implements the command "sort" specified by some [:parameters:].
+  /// Implements the command "sort" specified by some [parameters].
   /// Throws an exception on errors.
   void executeSort() {
     // 'sort a=input b=output ranges=n2-4,8 separator=,
@@ -1561,8 +1577,8 @@ class TextButler extends Logger {
   }
 
   /// Returns the full name of a command, given as abbreviation.
-  /// [:abbreviation:]: the first part of a command name.
-  /// Returns null on error ([:errorMessage:] is set in this case) or
+  /// [abbreviation]: the first part of a command name.
+  /// Returns null on error ([errorMessage] is set in this case) or
   /// the full name of the command.
   String? expandCommand(String abbreviation) {
     final rc = _expand('command', abbreviation, commandNames);
@@ -1570,15 +1586,15 @@ class TextButler extends Logger {
   }
 
   /// Returns the full name of a command, given as abbreviation.
-  /// [:abbreviation:]: the first part of a command name.
-  /// Returns null on error ([:errorMessage:] is set in this case) or
+  /// [abbreviation]: the first part of a command name.
+  /// Returns null on error ([errorMessage] is set in this case) or
   /// the full name of the command.
   String? expandParameter(String abbreviation, List<String> parameterNames) {
     final rc = _expand('parameter', abbreviation, parameterNames);
     return rc;
   }
 
-  /// Returns the content of a buffer with [:name:].
+  /// Returns the content of a buffer with [name].
   String getBuffer(String name) {
     if (!buffers.containsKey(name)) {
       throw WordingError('buffer "$name" does not exist');
@@ -1587,11 +1603,11 @@ class TextButler extends Logger {
     return rc;
   }
 
-  /// Replaces meta symbols in a given [:value:].
-  /// [:escChar:] is a character that introduces a meta symbol.
+  /// Replaces meta symbols in a given [value].
+  /// [escChar] is a character that introduces a meta symbol.
   /// Meta symbols witch escChar backslash are \n (newline), \r (carriage return)
   /// \f (form feed) \t (tabulator) \v (vertical tabulator.
-  /// Returns the interpolated [:value:].
+  /// Returns the interpolated [value].
   String interpolateString(String escChar, String value) {
     int ix = value.indexOf(escChar);
     StringBuffer buffer = StringBuffer();
@@ -1652,13 +1668,13 @@ class TextButler extends Logger {
     return buffer.toString();
   }
 
-  /// Tests whether a [:text:] is a decimal number
+  /// Tests whether a [text] is a decimal number
   bool isDecimal(String text) {
     final rc = regExprNumber.hasMatch(text);
     return rc;
   }
 
-  /// Logs a [:message:] in the buffer 'messages':
+  /// Logs a [message] in the buffer 'messages':
   @override
   bool log(String message) {
     if (buffers['log'] == '') {
@@ -1669,15 +1685,15 @@ class TextButler extends Logger {
     return true;
   }
 
-  /// Returns the names defined in [:expected:].
+  /// Returns the names defined in [expected].
   List<String> namesOf(MapParameterInfo expected) {
     final rc = expected.keys.toList(growable: false);
     return rc;
   }
 
   /// Parses an integer list into a ParameterValue instance.
-  /// [:name:] is the name of the parameter to parse.
-  /// The ParameterValue instance is stored in [:map:].
+  /// [name] is the name of the parameter to parse.
+  /// The ParameterValue instance is stored in [map].
   void parseIntList(String name, MapParameter map) {
     final list = <int>[];
     final list2 = unshiftNonSpaces().split(',');
@@ -1694,9 +1710,9 @@ class TextButler extends Logger {
   }
 
   /// Parses a list of string lists into a ParameterValue instance.
-  /// [:name:] is the name of the parameter to parse.
-  /// [:isPattern:]: true: patterns are allowed. false: only strings are allowed.
-  /// The ParameterValue instance is stored in [:map:].
+  /// [name] is the name of the parameter to parse.
+  /// [isPattern]: true: patterns are allowed. false: only strings are allowed.
+  /// The ParameterValue instance is stored in [map].
   void parseListOfStringList(String name, MapParameter map) {
     String separator =
         unshiftChar('parameter "$name": separator', regExpAutoSeparator);
@@ -1713,9 +1729,9 @@ class TextButler extends Logger {
   }
 
   /// Parses a string or a pattern into a ParameterValue instance.
-  /// [:name:] is the name of the parameter to parse.
-  /// The ParameterValue instance is stored in [:map:] (if not null).
-  /// [:isPattern:]: if true a regular expression or a ignore case string is allowed.
+  /// [name] is the name of the parameter to parse.
+  /// The ParameterValue instance is stored in [map] (if not null).
+  /// [isPattern]: if true a regular expression or a ignore case string is allowed.
   ParameterValue parseString(String name, MapParameter? map, bool isPattern) {
     String name2 = 'parameter "$name": ';
     var stringType = StringType.string;
@@ -1759,9 +1775,9 @@ class TextButler extends Logger {
   }
 
   /// Parses a pattern list into a ParameterValue instance.
-  /// [:name:] is the name of the parameter to parse.
-  /// [:isPattern:]: true: patterns are allowed. false: only strings are allowed.
-  /// The ParameterValue instance is stored in [:map:] (if not null).
+  /// [name] is the name of the parameter to parse.
+  /// [isPattern]: true: patterns are allowed. false: only strings are allowed.
+  /// The ParameterValue instance is stored in [map] (if not null).
   ParameterValue parseStringList(String name, MapParameter? map,
       {bool isPattern = false}) {
     String separator =
@@ -1896,36 +1912,64 @@ class TextButler extends Logger {
   }
 
   /// Searches the first hit of a given list of patterns in an interval of lines.
-  /// [:lines:] is a list of lines to inspect.
-  /// [:patterns:] is a list of regular expressions to find.
-  /// [:hit:]: OUT: returns the RegExpMatch instance and the index of the matching
-  /// pattern in [:patterns:].
-  /// [:from:] is the first index of [:lines:] to inspect.
-  /// [:until:] is the first index of [:lines:] not to inspect (excluding).
+  /// [lines] is a list of lines to inspect.
+  /// [patterns] is a list of regular expressions to find.
+  /// [excluded] is a list of regular expressions to exclude.
+  /// [hit]: OUT: returns the RegExpMatch instance and the index of the matching
+  /// pattern in [patterns].
+  /// [from] is the first index of [lines] to inspect.
+  /// [until] is the first index of [lines] not to inspect (excluding).
   /// Returns null if not found, or the line index of the first hit.
-  int? search(List<String> lines, List<RegExp> patterns, Hit hit,
+  int? search(List<String> lines, List<RegExp>? patterns,
+      List<RegExp>? excluded, Hit hit,
       {int from = 0, int? until}) {
     int? rc;
     until ??= lines.length;
     while (rc == null && from < until) {
       var ix = 0;
       final line = lines[from];
-      for (var regExp in patterns) {
-        if ((hit.hit = regExp.firstMatch(line)) != null) {
-          hit.index = ix;
+      if (excluded == null || searchInLine(line, excluded) == null) {
+        if (patterns == null) {
+          hit.index = 0;
+          hit.hit = null;
           rc = from;
           break;
+        } else {
+          for (var regExp in patterns) {
+            if ((hit.hit = regExp.firstMatch(line)) != null) {
+              hit.index = ix;
+              rc = from;
+              break;
+            }
+            ix++;
+          }
         }
-        ix++;
       }
       from++;
     }
     return rc;
   }
 
-  /// Splits the command into [:parameters:].
-  /// [:expected:]: the meta data of the parameters of the related command.
-  /// [:stringParameters:] contains a list of parameters, e.g. 'rexp=/\d/ value="123"
+  /// Tests whether one of the [patterns] matches the [line].
+  ///
+  /// Returns the [RegExpMatch] instance if found or null.
+  RegExpMatch? searchInLine(String line, List<RegExp>? patterns) {
+    RegExpMatch? rc;
+    if (patterns != null) {
+      for (final pattern in patterns) {
+        final matcher = pattern.firstMatch(line);
+        if (matcher != null) {
+          rc = matcher;
+          break;
+        }
+      }
+    }
+    return rc;
+  }
+
+  /// Splits the command into [parameters].
+  /// [expected]: the meta data of the parameters of the related command.
+  /// [stringParameters] contains a list of parameters, e.g. 'rexp=/\d/ value="123"
   /// Returns the description of the parameters as ParameterSet instance.
   ParameterSet splitParameters(MapParameterInfo expected) {
     String abbreviation = '';
@@ -2003,7 +2047,7 @@ class TextButler extends Logger {
     return ParameterSet(map, this, expected);
   }
 
-  /// Stores the given [:content:] into the buffer specified by parameter "output"
+  /// Stores the given [content] into the buffer specified by parameter "output"
   /// depending on the parameter "append".
   void store(ParameterSet current, String content) {
     final target = current.asString('output');
@@ -2014,9 +2058,9 @@ class TextButler extends Logger {
     }
   }
 
-  /// Returns the first character from [:stringParameters:] and remove it.
-  /// [:error:] is the error message, if no character is available.
-  /// [:pattern:]: null or a regular expression to validate the character.
+  /// Returns the first character from [stringParameters] and remove it.
+  /// [error] is the error message, if no character is available.
+  /// [pattern]: null or a regular expression to validate the character.
   String unshiftChar(String error, RegExp? pattern) {
     if (stringParameters.isEmpty) {
       throw WordingError('$error (too short)');
@@ -2029,8 +2073,8 @@ class TextButler extends Logger {
     return rc;
   }
 
-  /// Returns all non spaces from the top of [:stringParameters:].
-  /// That string is than removed from [:stringParameters:].
+  /// Returns all non spaces from the top of [stringParameters].
+  /// That string is than removed from [stringParameters].
   String unshiftNonSpaces() {
     RegExpMatch? match = regExpNonSpaces.firstMatch(stringParameters);
     String rc;
@@ -2044,8 +2088,8 @@ class TextButler extends Logger {
   }
 
   /// Returns the full name of a command, given as abbreviation.
-  /// [:abbreviation:]: the first part of a command name.
-  /// Throws [:WordingError:] on error.
+  /// [abbreviation]: the first part of a command name.
+  /// Throws [WordingError] on error.
   String _expand(String object, String abbreviation, List<String> names) {
     String rc = '';
     String error = '';

@@ -25,3 +25,4 @@ echo $LABEL >>$TARGET
 cat $TAR >>$TARGET
 echo "" >>$TARGET
 echo $END_LABEL >> $TARGET
+ls -l $TARGET

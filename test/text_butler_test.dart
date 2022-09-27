@@ -457,7 +457,7 @@ End:
 ''';
       butler.buffers['trg'] = '<<<\n';
       expect(
-          butler.execute(r'filter app s=R/^st/ e=R!^end! f=r/(\w+): (\d+)/ '
+          butler.execute(r'filter app s=R/^st/ en=R!^end! f=r/(\w+): (\d+)/ '
               r'i=src m=& o=trg r=2 template="* &1&/&group2&"'),
           isNull);
       expect(butler.buffers['trg'], '<<<\n* count/34* id/88');
@@ -690,5 +690,99 @@ opcache.memory_consumption=512
     r'insert above position=r/debug|production/ what=i\"max_count=1\n" ',
 
      */
+  });
+  group('TextButler-filter-examples', () {
+    final butler = TextButler();
+    const input = '''
+<?xml version="1.0" encoding="UTF-8"?>
+<staff>
+  <company>
+    <name>Easy Rider</name>
+  </company>
+  <person>
+    <id>1</id>
+    <name>Adam</name>
+  </person>
+  <person>
+    <id>2</id>
+    <name>Berta</name>
+  </person>
+  <person>
+    <id>3</id>
+    <name>Charly</name>
+  </person>
+</staff>
+''';
+    test('example-1-filter-name', () {
+      butler.buffers['input'] = input;
+      expect(butler.execute('filter fi=/name/'), isNull);
+      expect(butler.getBuffer('output'), '''
+    <name>Easy Rider</name>
+    <name>Adam</name>
+    <name>Berta</name>
+    <name>Charly</name>
+''');
+    });
+    test('example-2-filter-start-end-repeat', () {
+      butler.buffers['input'] = input;
+      expect(
+          butler.execute(
+              'filter start=/<person/ end=!</person! fi=/name/ repeat=2'),
+          isNull);
+      expect(butler.getBuffer('output'), '''
+    <name>Adam</name>
+    <name>Berta</name>
+''');
+    });
+    test('example-3-filter-start-end-template', () {
+      butler.buffers['input'] = input;
+      expect(
+          butler.execute(
+              'filter start=/<person/ end=!</person! fi=r/<(name|id)>(.*?)</ repeat=2 template="%group1%: %group2%\n"'),
+          isNull);
+      expect(butler.getBuffer('output'), '''
+id: 1
+name: Adam
+id: 2
+name: Berta
+''');
+    });
+    test('example-4-filter-start-end-template', () {
+      butler.buffers['input'] = input;
+      expect(
+          butler.execute(
+              'filter start=/<person/ end=!/person! Filters=;"<name";"<id" repeat=2'),
+          isNull);
+      expect(butler.getBuffer('output'), '''
+    <id>1</id>
+    <name>Adam</name>
+    <id>2</id>
+    <name>Berta</name>
+''');
+    });
+    test('example-5-filter-start-end-template', () {
+      butler.buffers['input'] = input;
+      expect(
+          butler.execute(
+              'filter start=/<person/ end=!</person! Filters=;r"<(name)>(.*?)<";r"<id>(.*?)<" repeat=2 Templates=;"%1%: %2%\n";"no: %1%\n"'),
+          isNull);
+      expect(butler.getBuffer('output'), '''
+no: 1
+name: Adam
+no: 2
+name: Berta
+''');
+    });
+    test('example-6-excludes', () {
+      butler.buffers['input'] = input;
+      expect(
+          butler.execute('filter start=/<person/ excluded=r!id|person|staff!'),
+          isNull);
+      expect(butler.getBuffer('output'), '''
+    <name>Adam</name>
+    <name>Berta</name>
+    <name>Charly</name>
+''');
+    });
   });
 }

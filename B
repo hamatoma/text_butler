@@ -1,6 +1,8 @@
 #! /bin/bash
 ./Prepare
+echo "Building linux"
 flutter build linux
+echo "Building web"
 flutter build web
 cd build/web/
 cp -a ../../tools/InstallWebsite.sh .
